@@ -15,7 +15,7 @@ function WalletConnected() {
   return (
     <div>
       <span>Connected: {shortenedAddress}</span>
-      <button onClick={() => disconnect()}>Disconnect</button>
+      <button onClick={() => disconnect()} className="gap-x-2 mr-2"> Disconnect</button>
     </div>
   );
 }

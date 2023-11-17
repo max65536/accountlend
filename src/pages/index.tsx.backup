@@ -1,5 +1,4 @@
 import WalletBar from "@/components/WalletBar";
-import Balance from "@/components/queryBalance";
 
 export default function Home() {
   return (
@@ -47,7 +46,6 @@ export default function Home() {
           </p>
         </a>
       </div>
-      <Balance />
     </main>
   );
 }
