@@ -1,18 +1,18 @@
+// pages/index.tsx
+
 import React from 'react';
 
-function MyPage() {
-  // 定义要触发的函数
+const IndexPage = () => {
   const handleClick = () => {
-    console.log('按钮被点击了');
-    // 在这里添加更多的函数逻辑
+    alert('Hello, World!');
   };
 
   return (
     <div>
-      <h1>我的页面</h1>
-      <button onClick={handleClick}>点击我</button>
+      <h1>Welcome to My Next.js Page</h1>
+      <button onClick={handleClick}>Click Me</button>
     </div>
   );
-}
+};
 
-export default MyPage;
+export default IndexPage;
