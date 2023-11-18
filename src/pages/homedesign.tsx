@@ -4,13 +4,24 @@ import { useState } from 'react';
 import WalletBar from '@/components/WalletBar';
 import { StarknetConfig } from '@starknet-react/core';
 import { StarknetProvider } from '@/components/starknet-provider';
+import { Double } from 'mongodb';
 
 function Home() {
   const [accountAddress, setAccountAddress] = useState('0x123...abc');
   // 假设的委托任务列表
+
+  interface Task {
+    id: number;
+    description: string;
+    type: string;
+    price:number;
+  }
+  
+
   const [tasks, setTasks] = useState([
-    { id: 1, description: "Sell 0.1 ETH" },
-    { id: 2, description: "Task 2" },
+    { id: 1, description: "0x2eb3 is lending subaccount", price:0.0001, type:"buy", from:"0xalice"},
+    { id: 2, description: "0x3e91 wants to rent my subaccount", price:0.0002, type:"sell" , from:"0xbob"},
+    { id: 3, description: "I created a new subaccount to lend", price:0.0002, type:"ready" , from:"0xbob"},
     // 更多任务...
   ]);
 
@@ -24,10 +35,58 @@ function Home() {
     console.log('创建子账户');
   };
 
-  const acceptTask = (taskId: number) => {
+  const acceptTask = (task:Task) => {
     // 这里实现接受任务的逻辑
-    console.log('接受任务', taskId);
+    console.log('接受任务', task);
+    switch (task.type) {
+        case "sell":            
+            return {}; 
+        case "ready":
+            setTasks(prevTasks => prevTasks.filter(t => t.id !== task.id));
+            console.log(tasks)
+            return {};
+        case "buy":
+          return {};
+        default:
+          return{};
+      }
   };
+
+  const addTask = (subaccount: string, price:number) => {
+    const newTask = {
+      id: tasks.length + 1, // 简单的方式生成新的ID
+      description: subaccount,
+      price: price,
+      type: "ready",
+      from: "myself"
+    };
+    setTasks([...tasks, newTask]);
+  };  
+  const getButtonStyle = (type:string) => {
+    switch (type) {
+      case "sell":
+        return { backgroundColor: "hsl(120, 30%, 70%)" }; 
+      case "ready":
+        return { backgroundColor: "hsl(0, 50%, 70%)" };        
+      case "buy":
+        return { backgroundColor: "hsl(39, 50%, 70%)" };
+      default:
+        return {};
+    }
+  };
+
+  const getButtonText = (type:string) => {
+    switch (type) {
+      case "sell":
+        return "Comfirm the deal and send my subkey"; 
+      case "ready":
+        return "cancel";
+      case "buy":
+        return "I want to rent it";
+      default:
+        return "";
+    }
+  };  
 
   return (
     <div>
@@ -53,7 +112,7 @@ function Home() {
         <section>
           <h2>Account Information</h2>
           <h3>Manage Your Account</h3>
-          <p>Account Address: <span id="account-address">0x123...abc</span></p>
+          
           <div className="button-group">
             <StarknetProvider>
                 <WalletBar />
@@ -62,19 +121,17 @@ function Home() {
           </div>
 
 
-          <div>
-            <main className="container">
-                <h3>Delegation List</h3>
-                <div>
-                {tasks.map(task => (
-                    <div key={task.id} className="list-item">
-                    <p>{task.description} <button onClick={() => acceptTask(task.id)}>Accept</button></p>
-                    </div>
-                ))}
-                </div>
-            </main>
-            {/* ... 其他内容 ... */}
+        <button onClick={() => addTask("I created a new subaccount to lend", 0.00001)}>Add New Task</button>        
+        <div>
+          {tasks.map(task => (
+            <div key={task.id} className="list-item">
+              <p>{task.description}  ({task.price}ETH)
+                <button 
+                    style={getButtonStyle(task.type)}
+                    onClick={() => acceptTask(task)}>{getButtonText(task.type)}</button></p>
             </div>
+          ))}
+        </div>
         </section>
       </div>
     </main>
