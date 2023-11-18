@@ -1,5 +1,6 @@
 import WalletBar from "@/components/WalletBar";
 import Balance from "@/components/queryBalance";
+import UpgradeAccount from "@/components/upgradeAccount";
 
 export default function Home() {
   return (
@@ -48,6 +49,7 @@ export default function Home() {
         </a>
       </div>
       <Balance />
+      <UpgradeAccount />
     </main>
   );
 }
