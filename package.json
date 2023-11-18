@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@argent/x-sessions": "^6.3.1",
     "@starknet-react/chains": "^0.1.0",
     "@starknet-react/core": "^2.0.0",
     "get-starknet-core": "^3.2.0",
