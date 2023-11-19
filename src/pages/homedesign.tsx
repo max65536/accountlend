@@ -56,8 +56,6 @@ function Home() {
           <div className="button-group">
 
                 <WalletBar />                
-
-            <button>Create Sub-Account</button>
           </div>
           <AccountMarket/>
           </StarknetProvider>
