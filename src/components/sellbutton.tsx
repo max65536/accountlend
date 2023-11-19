@@ -1,5 +1,5 @@
 "use client"
-import { check_balance } from "@/pages/interactERC20";
+import { check_balance } from "./interactERC20";
 import { json, uint256 } from "starknet";
 import data from "@/pages/ERC20ETH.json"
 import { useState, useMemo, useEffect } from "react";

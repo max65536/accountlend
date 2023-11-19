@@ -1,10 +1,10 @@
 "use client"
-import { check_balance } from "@/pages/interactERC20";
+// import { check_balance } from "@/pages/interactERC20";
 import { json, uint256 } from "starknet";
-import data from "@/pages/ERC20ETH.json"
+
 import { useState, useMemo, useEffect } from "react";
 import SendButton from "./tasksend";
-import ShowAddress from "./transferButton";
+// import ShowAddress from "./transferButton";
 import PayButton from "./taskpay";
 
 
@@ -70,7 +70,7 @@ export default function AccountMarket() {
             case "sell": 
                 console.log("sell");
                 if (!account.address) return {};
-                const result = check_balance(account.address);
+                // const result = check_balance(account.address);
                 setDivContent("sell succeed");            
                 return {};
             case "ready":
