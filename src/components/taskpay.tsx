@@ -44,7 +44,7 @@ export default function PayButton({address, amount}:PayButtonProps) {
 
     return (
       <>
-          <button style={{background: "hsl(39, 50%, 70%)"}}onClick={writeTransaction}>Pay adn get subkey</button>
+          <button style={{background: "hsl(39, 50%, 70%)"}}onClick={writeTransaction}>Pay and get subkey</button>
       </>
     )
   }

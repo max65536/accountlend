@@ -100,7 +100,7 @@ export default function AccountMarket() {
     <div>
     <button onClick={() => addTask("I created a new subaccount to lend", 0.00001)}>Add New Subaccount</button>        
     <div>{divContent}</div>
-    <ShowAddress />
+    {/* <ShowAddress /> */}
     {/* <PayButton address="0xaa" amount={BigInt(10)}/> */}
     {/* <AddComponent/> */}
     {tasks.map(task => (
