@@ -45,11 +45,11 @@ async function sendSubKey(targetaddress: string, accountintr:AccountInterface, p
 
 
 export default function sendComponent({targetaddress}:Send){
-    const {account} = useAccount();
-    if (!account) return
-    const {provider} = useProvider();
+    // const {account} = useAccount();
+    // if (!account) return
+    // const {provider} = useProvider();
     const sendTransaction = () => {
-        sendSubKey(targetaddress, account, provider); 
+        // sendSubKey(targetaddress, account, provider); 
       };
     
     return (

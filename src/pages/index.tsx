@@ -7,7 +7,7 @@ import { StarknetProvider } from '@/components/starknet-provider';
 import { Double } from 'mongodb';
 import { check_balance } from './interactERC20';
 import SellButton from '@/components/sellbutton';
-import handleList from '@/components/handlelist';
+// import handleList from '@/components/handlelist';
 import AccountMarket from '@/components/accountMarket';
 function Home() {
   const [accountAddress, setAccountAddress] = useState('0x123...abc');

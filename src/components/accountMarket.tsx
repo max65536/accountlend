@@ -15,7 +15,7 @@ import {
     useNetwork,    
     useWaitForTransaction,
   } from "@starknet-react/core";
-import AddComponent from "./increment";
+// import AddComponent from "./increment";
 
 interface Task {
     id: number;
@@ -76,7 +76,7 @@ export default function AccountMarket() {
             case "ready":
                 setTasks(prevTasks => prevTasks.filter(t => t.id !== task.id));
                 console.log(tasks)
-                return <div>"finished"</div>;
+                return {};
             case "buy":
                 console.log("address" + account.address);
               return {};
