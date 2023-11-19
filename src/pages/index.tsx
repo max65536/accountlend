@@ -2,11 +2,7 @@ import Head from 'next/head';
 import { useState } from 'react';
 // import styles from '../styles/Home.module.css';
 import WalletBar from '@/components/WalletBar';
-import { StarknetConfig, useAccount } from '@starknet-react/core';
 import { StarknetProvider } from '@/components/starknet-provider';
-import { Double } from 'mongodb';
-import { check_balance } from './interactERC20';
-import SellButton from '@/components/sellbutton';
 // import handleList from '@/components/handlelist';
 import AccountMarket from '@/components/accountMarket';
 function Home() {
