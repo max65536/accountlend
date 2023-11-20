@@ -14,8 +14,6 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Users can set the expire time, limit action(e.g. exclude transfer), of the session key. Once generated the session, users can trade it on the platform. The buyers gain temporary limited control of the seller's account. To avoid the security problem, the seller can cancel the sessionkey at any time and can limit the actions as they want.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+Demo: https://accountlend.vercel.app/
