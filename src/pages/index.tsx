@@ -4,6 +4,8 @@ import { Wallet, Shield, Clock, Users, ArrowRight, Plus } from 'lucide-react';
 import WalletBar from '@/components/WalletBar';
 import { StarknetProvider } from '@/components/starknet-provider';
 import AccountMarket from '@/components/accountMarket';
+import SessionKeyCreator from '@/components/SessionKeyCreator';
+import SessionKeyManager from '@/components/SessionKeyManager';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -178,17 +180,9 @@ function Home() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12">
-                    <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">Session Key Creation</h3>
-                    <p className="text-gray-600 mb-6">
-                      This feature is currently under development. Soon you'll be able to create 
-                      secure session keys with custom permissions and time limits.
-                    </p>
-                    <Button variant="outline" disabled>
-                      Coming Soon
-                    </Button>
-                  </div>
+                  <StarknetProvider>
+                    <SessionKeyCreator />
+                  </StarknetProvider>
                 </CardContent>
               </Card>
             )}
@@ -205,16 +199,9 @@ function Home() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12">
-                    <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">Session Management</h3>
-                    <p className="text-gray-600 mb-6">
-                      Track your active sessions, monitor usage, and revoke access when needed.
-                    </p>
-                    <Button variant="outline" disabled>
-                      Coming Soon
-                    </Button>
-                  </div>
+                  <StarknetProvider>
+                    <SessionKeyManager />
+                  </StarknetProvider>
                 </CardContent>
               </Card>
             )}

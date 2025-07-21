@@ -1,6 +1,6 @@
 "use client";
 import { useAccount, useConnect, useContractWrite, useProvider } from "@starknet-react/core";
-import { Button } from "./ui/Button";
+import { Button } from "./ui/button";
 import { queryClass } from "./queryClass";
 import React from 'react'
 import {
@@ -82,4 +82,3 @@ import {
       </div>
     );
   }
-  
