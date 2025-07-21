@@ -1,0 +1,145 @@
+# Cline Rules for AccountLend Project
+
+## Project Context
+This is a Session Key Marketplace built on Starknet that allows users to lend and rent temporary account access through session keys. The project uses Next.js frontend with Cairo smart contracts.
+
+## Development Progress Synchronization Rules
+
+### 1. Always Update development_progress.md
+- Before making any code changes, check the current status in development_progress.md
+- After completing any task, update the corresponding checkbox from [ ] to [x]
+- When starting new work, move tasks from TODO to IN PROGRESS section
+- Add new issues or blockers as they are discovered
+- Update the "Last Updated" timestamp when making changes
+
+### 2. File Change Tracking
+When modifying these key files, update development_progress.md accordingly:
+- `contract/lendaccount/src/lib.cairo` - Update Smart Contract Development section
+- `contract/lendaccount/src/market.cairo` - Update Smart Contract Development section
+- `src/components/tasksend.tsx` - Update Session Key Implementation section
+- `src/components/taskpay.tsx` - Update Payment system status
+- `src/components/accountMarket.tsx` - Update Core Components section
+- `package.json` - Update Technology Stack if dependencies change
+
+### 3. Priority Guidelines
+Focus on tasks in this order:
+1. **Critical Issues** (Smart contracts, session integration)
+2. **High Priority** tasks (Security, core functionality)
+3. **Medium Priority** tasks (UX improvements)
+4. **Low Priority** tasks (Advanced features)
+
+### 4. Code Quality Standards
+- Always use TypeScript for new code
+- Add proper error handling for all async operations
+- Include loading states for user interactions
+- Validate all user inputs
+- Follow Next.js and React best practices
+- Comment complex logic, especially Cairo contracts
+
+### 5. Testing Requirements
+Before marking any task as complete:
+- Test wallet connection with both Argent and Braavos
+- Verify contract interactions work on testnet
+- Check responsive design on mobile
+- Ensure error states are handled gracefully
+
+### 6. Security Checklist
+For any session key or payment related changes:
+- [ ] Validate session expiration times
+- [ ] Check policy enforcement
+- [ ] Verify secure key handling
+- [ ] Test emergency cancellation
+- [ ] Review for potential vulnerabilities
+
+### 7. Documentation Updates
+When completing major features:
+- Update README.md with new functionality
+- Add code comments for complex logic
+- Update API documentation if applicable
+- Create user guides for new features
+
+### 8. Deployment Checklist
+Before deploying to production:
+- [ ] All tests pass
+- [ ] Smart contracts deployed to testnet
+- [ ] Frontend connects to correct contract addresses
+- [ ] Error handling works properly
+- [ ] Performance is acceptable
+- [ ] Security review completed
+
+### 9. Issue Tracking
+When encountering problems:
+- Add to "Current Issues & Blockers" section
+- Include error messages and reproduction steps
+- Mark related tasks as blocked if necessary
+- Update sprint goals if timeline is affected
+
+### 10. Sprint Management
+At the end of each sprint:
+- Move completed tasks to COMPLETED section
+- Update sprint goals based on progress
+- Identify new blockers or technical debt
+- Plan next sprint priorities
+
+## Specific Component Rules
+
+### Smart Contracts (Cairo)
+- Always test on Starknet testnet before mainnet
+- Include comprehensive error handling
+- Add events for all state changes
+- Document all public functions
+- Follow Cairo naming conventions
+
+### Frontend Components
+- Use React hooks properly (useEffect, useState, useMemo)
+- Handle loading and error states
+- Implement proper TypeScript types
+- Add accessibility attributes
+- Follow responsive design principles
+
+### Session Key Integration
+- Always validate session permissions
+- Check expiration before use
+- Handle revocation gracefully
+- Encrypt sensitive data
+- Log security events
+
+## Emergency Procedures
+
+### If Smart Contracts Need Emergency Updates
+1. Pause marketplace functionality
+2. Deploy fixed contracts to testnet
+3. Test thoroughly
+4. Update frontend contract addresses
+5. Resume operations
+6. Update development_progress.md with incident details
+
+### If Frontend Has Critical Bugs
+1. Revert to last known good version
+2. Fix issues in development
+3. Test on staging environment
+4. Deploy fix
+5. Update progress tracking
+
+## Package Management Rules
+- Always use `yarn` for package management (not npm)
+- Run `yarn install` after pulling changes
+- Use `yarn add` for adding dependencies
+- Use `yarn remove` for removing dependencies
+
+## Automation Rules
+- Use GitHub Actions for automated testing
+- Auto-deploy to Vercel on main branch push
+- Run linting and type checking on all commits
+- Generate contract documentation automatically
+
+## Communication Guidelines
+- Update progress weekly
+- Document all architectural decisions
+- Share blockers immediately
+- Review code changes with team
+- Keep stakeholders informed of major changes
+
+---
+
+Remember: The goal is to maintain a clear, accurate picture of project progress while ensuring code quality and security standards are met.
