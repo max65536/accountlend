@@ -1,8 +1,16 @@
 [package]
 name = "lendaccount"
 version = "0.1.0"
+edition = "2023_11"
 
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
 
 [dependencies]
-# foo = { path = "vendor/foo" }
+starknet = ">=2.3.0"
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
+
+[tool.snforge]
+# See more keys and their definitions at https://foundry-rs.github.io/starknet-foundry/appendix/snforge-toml.html

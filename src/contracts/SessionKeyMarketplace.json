@@ -1,0 +1,186 @@
+{
+  "abi": [
+    {
+      "type": "function",
+      "name": "list_session_key",
+      "inputs": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        },
+        {
+          "name": "price",
+          "type": "core::integer::u256"
+        }
+      ],
+      "outputs": [],
+      "state_mutability": "external"
+    },
+    {
+      "type": "function",
+      "name": "rent_session_key",
+      "inputs": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::bool"
+        }
+      ],
+      "state_mutability": "external"
+    },
+    {
+      "type": "function",
+      "name": "cancel_listing",
+      "inputs": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "state_mutability": "external"
+    },
+    {
+      "type": "function",
+      "name": "get_listing_info",
+      "inputs": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "lendaccount::market::ListingInfo"
+        }
+      ],
+      "state_mutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "get_active_listings",
+      "inputs": [
+        {
+          "name": "offset",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "limit",
+          "type": "core::integer::u32"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::array::Array::<core::felt252>"
+        }
+      ],
+      "state_mutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "withdraw_earnings",
+      "inputs": [
+        {
+          "name": "amount",
+          "type": "core::integer::u256"
+        }
+      ],
+      "outputs": [],
+      "state_mutability": "external"
+    },
+    {
+      "type": "function",
+      "name": "get_user_earnings",
+      "inputs": [
+        {
+          "name": "user",
+          "type": "core::starknet::contract_address::ContractAddress"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::integer::u256"
+        }
+      ],
+      "state_mutability": "view"
+    }
+  ],
+  "events": [
+    {
+      "type": "event",
+      "name": "SessionKeyListed",
+      "keys": [],
+      "data": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "price",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "SessionKeyRented",
+      "keys": [],
+      "data": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "renter",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "price",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "ListingCancelled",
+      "keys": [],
+      "data": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "EarningsWithdrawn",
+      "keys": [],
+      "data": [
+        {
+          "name": "user",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u256"
+        }
+      ]
+    }
+  ]
+}

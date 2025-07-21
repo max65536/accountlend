@@ -1,0 +1,167 @@
+{
+  "abi": [
+    {
+      "type": "function",
+      "name": "create_session_key",
+      "inputs": [
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "duration",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "permissions",
+          "type": "core::array::Array::<core::felt252>"
+        },
+        {
+          "name": "price",
+          "type": "core::integer::u256"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::felt252"
+        }
+      ],
+      "state_mutability": "external"
+    },
+    {
+      "type": "function",
+      "name": "validate_session_key",
+      "inputs": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::bool"
+        }
+      ],
+      "state_mutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "revoke_session_key",
+      "inputs": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [],
+      "state_mutability": "external"
+    },
+    {
+      "type": "function",
+      "name": "get_session_key_info",
+      "inputs": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "lendaccount::lib::SessionKeyInfo"
+        }
+      ],
+      "state_mutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "is_session_expired",
+      "inputs": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::bool"
+        }
+      ],
+      "state_mutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "get_session_permissions",
+      "inputs": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "core::array::Array::<core::felt252>"
+        }
+      ],
+      "state_mutability": "view"
+    }
+  ],
+  "events": [
+    {
+      "type": "event",
+      "name": "SessionKeyCreated",
+      "keys": [],
+      "data": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "duration",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "price",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "SessionKeyRevoked",
+      "keys": [],
+      "data": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "SessionKeyRented",
+      "keys": [],
+      "data": [
+        {
+          "name": "session_key",
+          "type": "core::felt252"
+        },
+        {
+          "name": "renter",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
+        }
+      ]
+    }
+  ]
+}
