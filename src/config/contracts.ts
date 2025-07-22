@@ -25,10 +25,10 @@ export const getContractAddress = (contractName: keyof typeof CONTRACT_ADDRESSES
 // Network configuration
 export const NETWORK_CONFIG = {
   testnet: {
-    name: 'Starknet Testnet',
-    chainId: '0x534e5f474f45524c49', // SN_GOERLI
-    rpcUrl: 'https://starknet-testnet.public.blastapi.io',
-    explorerUrl: 'https://testnet.starkscan.co',
+    name: 'Starknet Sepolia Testnet',
+    chainId: '0x534e5f5345504f4c4941', // SN_SEPOLIA
+    rpcUrl: 'https://starknet-sepolia.public.blastapi.io',
+    explorerUrl: 'https://sepolia.starkscan.co',
   },
   mainnet: {
     name: 'Starknet Mainnet',

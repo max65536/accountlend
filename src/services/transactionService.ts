@@ -253,12 +253,15 @@ export class TransactionService {
    */
   private loadStoredTransactions(): void {
     try {
-      const stored = localStorage.getItem('accountlend_transactions');
-      if (stored) {
-        const transactions: TransactionInfo[] = JSON.parse(stored);
-        transactions.forEach(tx => {
-          this.transactions.set(tx.hash, tx);
-        });
+      // Only access localStorage in browser environment
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem('accountlend_transactions');
+        if (stored) {
+          const transactions: TransactionInfo[] = JSON.parse(stored);
+          transactions.forEach(tx => {
+            this.transactions.set(tx.hash, tx);
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to load stored transactions:', error);
@@ -270,8 +273,11 @@ export class TransactionService {
    */
   private saveTransactions(): void {
     try {
-      const transactions = Array.from(this.transactions.values());
-      localStorage.setItem('accountlend_transactions', JSON.stringify(transactions));
+      // Only access localStorage in browser environment
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const transactions = Array.from(this.transactions.values());
+        localStorage.setItem('accountlend_transactions', JSON.stringify(transactions));
+      }
     } catch (error) {
       console.error('Failed to save transactions:', error);
     }

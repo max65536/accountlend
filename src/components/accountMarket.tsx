@@ -17,6 +17,9 @@ import {
     parsePermissions
 } from "../utils/contractUtils";
 import { blockchainEventService, MarketplaceListing } from "../services/blockchainEventService";
+import { cacheService } from "../services/cacheService";
+import { batchContractCall } from "../services/batchService";
+import { paginationService, createPaginationState, PaginationState } from "../services/paginationService";
 import { Account } from "starknet";
 
 interface SessionKeyListing {
@@ -83,6 +86,9 @@ export default function AccountMarket() {
     const [error, setError] = useState<string | null>(null);
     const [listings, setListings] = useState<SessionKeyListing[]>([]);
     const [useMockData, setUseMockData] = useState(true);
+    const [paginationState, setPaginationState] = useState<PaginationState>(
+        createPaginationState(1, 6) // Show 6 items per page
+    );
     
     // Mock data fallback
     const [tasks, setTasks] = useState<Task[]>([

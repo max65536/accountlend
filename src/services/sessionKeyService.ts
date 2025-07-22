@@ -215,6 +215,11 @@ export class SessionKeyService {
    */
   getStoredSessionKeys(userAddress: string): StoredSessionKey[] {
     try {
+      // Only access localStorage in browser environment
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return [];
+      }
+
       const stored = localStorage.getItem(`sessionKeys_${userAddress}`);
       if (!stored) return [];
       
@@ -245,6 +250,11 @@ export class SessionKeyService {
    */
   private storeSessionKey(sessionKey: StoredSessionKey): void {
     try {
+      // Only access localStorage in browser environment
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return;
+      }
+
       const userAddress = sessionKey.owner;
       const existing = this.getStoredSessionKeys(userAddress);
       const updated = [...existing, sessionKey];
@@ -260,6 +270,11 @@ export class SessionKeyService {
    */
   private updateStoredSessionKey(sessionKey: StoredSessionKey): void {
     try {
+      // Only access localStorage in browser environment
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return;
+      }
+
       const userAddress = sessionKey.owner;
       const existing = this.getStoredSessionKeys(userAddress);
       const updated = existing.map(key => 
@@ -393,10 +408,12 @@ export class SessionKeyService {
       }
     ];
 
-    // Store mock keys if none exist
-    const existing = this.getStoredSessionKeys(userAddress);
-    if (existing.length === 0) {
-      localStorage.setItem(`sessionKeys_${userAddress}`, JSON.stringify(mockKeys));
+    // Store mock keys if none exist (only in browser environment)
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const existing = this.getStoredSessionKeys(userAddress);
+      if (existing.length === 0) {
+        localStorage.setItem(`sessionKeys_${userAddress}`, JSON.stringify(mockKeys));
+      }
     }
 
     return mockKeys;
