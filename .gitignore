@@ -127,6 +127,27 @@ starknet_open_zeppelin_accounts.json
 # Deployment artifacts
 src/config/deployed_contracts.ts
 
+# Test artifacts and sensitive data
+test_accounts.json
+sessionKeys_*.json
+transactions_*.json
+marketplace_*.json
+*.test.json
+coverage/
+.nyc_output/
+
+# Private keys and sensitive data
+*.private
+*.secret
+*.key
+account_*.json
+private_key_*.txt
+
 # Backup files
 *.backup
 *.bak
+
+# Playwright test results
+test-results/
+playwright-report/
+playwright/.cache/
