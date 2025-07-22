@@ -17,6 +17,7 @@ import {
     parsePermissions
 } from "../utils/contractUtils";
 import { blockchainEventService, MarketplaceListing } from "../services/blockchainEventService";
+import { sessionKeyService, StoredSessionKey } from "../services/sessionKeyService";
 import { cacheService } from "../services/cacheService";
 import { batchContractCall } from "../services/batchService";
 import { paginationService, createPaginationState, PaginationState } from "../services/paginationService";
@@ -242,13 +243,39 @@ export default function AccountMarket() {
 
     // Rent session key using blockchain event service
     const handleRentSessionKey = async (sessionKey: string) => {
-        if (!account.account) return;
+        if (!account.account || !account.address) return;
         
         setIsLoading(true);
         try {
             // Use blockchain event service for renting
             const txHash = await blockchainEventService.rentSessionKey(sessionKey, account.account);
             setDivContent(`Session key rental transaction submitted: ${txHash.slice(0, 10)}...`);
+            
+            // Try to import the session key for local management
+            try {
+                // Find the listing to get session data
+                const listing = listings.find(l => l.sessionKey === sessionKey);
+                if (listing) {
+                    const exportData = JSON.stringify({
+                        id: listing.sessionKey,
+                        description: listing.description,
+                        permissions: listing.permissions,
+                        duration: Math.floor((listing.expiresAt - Date.now()) / (1000 * 3600)),
+                        price: listing.price,
+                        expiresAt: listing.expiresAt,
+                        sessionData: {
+                            key: listing.sessionKey,
+                            policies: listing.permissions.map(p => ({ contractAddress: '*', selector: p.toLowerCase() }))
+                        }
+                    });
+                    
+                    await sessionKeyService.importSessionKey(exportData, account.address);
+                    setDivContent(`Session key rented and imported successfully!`);
+                }
+            } catch (importError) {
+                console.warn('Failed to import session key locally:', importError);
+                // Continue with just the rental success message
+            }
             
             // Refresh listings after successful transaction
             setTimeout(() => {
@@ -270,6 +297,44 @@ export default function AccountMarket() {
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    // Enhanced session key validation
+    const validateSessionKeyAccess = async (sessionKey: string): Promise<boolean> => {
+        if (!account.address) return false;
+        
+        try {
+            const storedKeys = sessionKeyService.getStoredSessionKeys(account.address);
+            const storedKey = storedKeys.find(k => k.id === sessionKey);
+            
+            if (storedKey) {
+                return await sessionKeyService.validateSessionKey(storedKey);
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('Failed to validate session key access:', error);
+            return false;
+        }
+    };
+
+    // Get session key details for enhanced display
+    const getSessionKeyDetails = async (sessionKey: string) => {
+        if (!account.address) return null;
+        
+        try {
+            const storedKeys = sessionKeyService.getStoredSessionKeys(account.address);
+            const storedKey = storedKeys.find(k => k.id === sessionKey);
+            
+            if (storedKey) {
+                return await sessionKeyService.getSessionKeyDetails(storedKey);
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Failed to get session key details:', error);
+            return null;
         }
     };
 
