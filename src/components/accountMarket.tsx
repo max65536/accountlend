@@ -16,6 +16,7 @@ import {
     formatTimestamp,
     parsePermissions
 } from "../utils/contractUtils";
+import { blockchainEventService, MarketplaceListing } from "../services/blockchainEventService";
 import { Account } from "starknet";
 
 interface SessionKeyListing {
@@ -117,7 +118,7 @@ export default function AccountMarket() {
         },
     ]);
 
-    // Load listings from deployed contracts
+    // Load listings from blockchain event service
     const loadListings = async () => {
         if (!account.account) return;
         
@@ -125,44 +126,75 @@ export default function AccountMarket() {
         setError(null);
         
         try {
-            // Try to fetch from deployed contracts
-            const activeListings = await getActiveListings(account.account as Account, 0, 20);
+            // Check contract health first
+            const contractHealth = await blockchainEventService.checkContractHealth();
             
-            if (activeListings.length > 0) {
-                const listingsWithDetails = await Promise.all(
-                    activeListings.map(async (sessionKey: string) => {
-                        try {
-                            const info = await getSessionKeyInfo(account.account as Account, sessionKey);
-                            const currentTime = Math.floor(Date.now() / 1000);
-                            
-                            return {
-                                sessionKey,
-                                owner: info.owner,
-                                price: formatWeiToEth(info.price.toString()),
-                                isActive: info.is_active && currentTime < info.expires_at,
-                                createdAt: info.created_at,
-                                expiresAt: info.expires_at,
-                                permissions: parsePermissions(info.permissions || []),
-                                description: `Session key with ${parsePermissions(info.permissions || []).join(', ')} permissions`,
-                                duration: `${Math.floor((info.expires_at - currentTime) / 3600)} hours remaining`,
-                                type: info.owner === account.address ? 'owned' : 'available'
-                            } as SessionKeyListing;
-                        } catch (err) {
-                            console.error('Failed to get session key info:', err);
-                            return null;
-                        }
-                    })
-                );
+            if (contractHealth.sessionKeyManager && contractHealth.sessionKeyMarketplace) {
+                // Try to fetch from blockchain event service
+                const marketplaceListings = await blockchainEventService.getActiveMarketplaceListings();
                 
-                const validListings = listingsWithDetails.filter(listing => listing !== null) as SessionKeyListing[];
-                setListings(validListings);
-                setUseMockData(false);
-                setDivContent(`Loaded ${validListings.length} session keys from blockchain`);
+                if (marketplaceListings.length > 0) {
+                    const convertedListings: SessionKeyListing[] = marketplaceListings.map(listing => ({
+                        sessionKey: listing.sessionKeyId,
+                        owner: listing.owner,
+                        price: listing.price,
+                        isActive: listing.isActive,
+                        createdAt: listing.createdAt,
+                        expiresAt: listing.expiresAt,
+                        permissions: listing.permissions,
+                        description: listing.description,
+                        duration: `${Math.floor((listing.expiresAt - Date.now()) / (1000 * 3600))} hours remaining`,
+                        type: listing.owner === account.address ? 'owned' : 'available'
+                    }));
+                    
+                    setListings(convertedListings);
+                    setUseMockData(false);
+                    setDivContent(`Loaded ${convertedListings.length} session keys from blockchain`);
+                } else {
+                    // No listings found, but contracts are working
+                    setListings([]);
+                    setUseMockData(false);
+                    setDivContent('No active session keys found on the marketplace');
+                }
             } else {
-                // No listings found, but contracts are working
-                setListings([]);
-                setUseMockData(false);
-                setDivContent('No active session keys found on the marketplace');
+                // Fallback to old contract method
+                const activeListings = await getActiveListings(account.account as Account, 0, 20);
+                
+                if (activeListings.length > 0) {
+                    const listingsWithDetails = await Promise.all(
+                        activeListings.map(async (sessionKey: string) => {
+                            try {
+                                const info = await getSessionKeyInfo(account.account as Account, sessionKey);
+                                const currentTime = Math.floor(Date.now() / 1000);
+                                
+                                return {
+                                    sessionKey,
+                                    owner: info.owner,
+                                    price: formatWeiToEth(info.price.toString()),
+                                    isActive: info.is_active && currentTime < info.expires_at,
+                                    createdAt: info.created_at,
+                                    expiresAt: info.expires_at,
+                                    permissions: parsePermissions(info.permissions || []),
+                                    description: `Session key with ${parsePermissions(info.permissions || []).join(', ')} permissions`,
+                                    duration: `${Math.floor((info.expires_at - currentTime) / 3600)} hours remaining`,
+                                    type: info.owner === account.address ? 'owned' : 'available'
+                                } as SessionKeyListing;
+                            } catch (err) {
+                                console.error('Failed to get session key info:', err);
+                                return null;
+                            }
+                        })
+                    );
+                    
+                    const validListings = listingsWithDetails.filter(listing => listing !== null) as SessionKeyListing[];
+                    setListings(validListings);
+                    setUseMockData(false);
+                    setDivContent(`Loaded ${validListings.length} session keys from contracts`);
+                } else {
+                    setListings([]);
+                    setUseMockData(false);
+                    setDivContent('No active session keys found');
+                }
             }
         } catch (err) {
             console.error('Failed to load listings:', err);
@@ -202,13 +234,14 @@ export default function AccountMarket() {
         }
     };
 
-    // Rent session key from blockchain
+    // Rent session key using blockchain event service
     const handleRentSessionKey = async (sessionKey: string) => {
         if (!account.account) return;
         
         setIsLoading(true);
         try {
-            const txHash = await rentSessionKey(account.account as Account, sessionKey);
+            // Use blockchain event service for renting
+            const txHash = await blockchainEventService.rentSessionKey(sessionKey, account.account);
             setDivContent(`Session key rental transaction submitted: ${txHash.slice(0, 10)}...`);
             
             // Refresh listings after successful transaction
@@ -216,9 +249,19 @@ export default function AccountMarket() {
                 loadListings();
             }, 3000);
         } catch (err) {
-            const errorMessage = handleContractError(err);
-            setError(errorMessage);
-            setDivContent(`Failed to rent session key: ${errorMessage}`);
+            // Fallback to old method if blockchain event service fails
+            try {
+                const txHash = await rentSessionKey(account.account as Account, sessionKey);
+                setDivContent(`Session key rental transaction submitted: ${txHash.slice(0, 10)}...`);
+                
+                setTimeout(() => {
+                    loadListings();
+                }, 3000);
+            } catch (fallbackErr) {
+                const errorMessage = handleContractError(fallbackErr);
+                setError(errorMessage);
+                setDivContent(`Failed to rent session key: ${errorMessage}`);
+            }
         } finally {
             setIsLoading(false);
         }
