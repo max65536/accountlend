@@ -17,56 +17,9 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
+import { sessionKeyService, StoredSessionKey } from '../services/sessionKeyService';
 
-interface SessionKey {
-  id: string;
-  description: string;
-  permissions: string[];
-  duration: number;
-  price: string;
-  createdAt: number;
-  expiresAt: number;
-  status: 'active' | 'expired' | 'revoked' | 'rented';
-  rentedBy?: string;
-  earnings?: number;
-}
-
-const mockSessionKeys: SessionKey[] = [
-  {
-    id: '0x1a2b3c4d5e6f',
-    description: 'Gaming account with DeFi permissions',
-    permissions: ['transfer', 'swap', 'gaming'],
-    duration: 24,
-    price: '0.002',
-    createdAt: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
-    expiresAt: Date.now() + 22 * 60 * 60 * 1000, // 22 hours from now
-    status: 'rented',
-    rentedBy: '0xabc123...def456',
-    earnings: 0.002
-  },
-  {
-    id: '0x2b3c4d5e6f7a',
-    description: 'DeFi trading session key',
-    permissions: ['swap', 'approve'],
-    duration: 12,
-    price: '0.001',
-    createdAt: Date.now() - 6 * 60 * 60 * 1000, // 6 hours ago
-    expiresAt: Date.now() + 6 * 60 * 60 * 1000, // 6 hours from now
-    status: 'active'
-  },
-  {
-    id: '0x3c4d5e6f7a8b',
-    description: 'NFT trading permissions',
-    permissions: ['nft', 'approve'],
-    duration: 48,
-    price: '0.005',
-    createdAt: Date.now() - 50 * 60 * 60 * 1000, // 50 hours ago
-    expiresAt: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago (expired)
-    status: 'expired'
-  }
-];
-
-const getStatusInfo = (status: SessionKey['status']) => {
+const getStatusInfo = (status: StoredSessionKey['status']) => {
   switch (status) {
     case 'active':
       return {
@@ -129,10 +82,25 @@ const formatTimeRemaining = (expiresAt: number) => {
 
 export default function SessionKeyManager() {
   const { account, address } = useAccount();
-  const [sessionKeys, setSessionKeys] = useState<SessionKey[]>(mockSessionKeys);
+  const [sessionKeys, setSessionKeys] = useState<StoredSessionKey[]>([]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [showPrivateKey, setShowPrivateKey] = useState<{ [key: string]: boolean }>({});
   const [loading, setLoading] = useState<{ [key: string]: boolean }>({});
+
+  // Load session keys when component mounts or account changes
+  useEffect(() => {
+    if (account && address) {
+      const keys = sessionKeyService.getStoredSessionKeys(address);
+      if (keys.length === 0) {
+        // Create mock keys for demo if none exist
+        sessionKeyService.createMockSessionKeys(address);
+        const mockKeys = sessionKeyService.getStoredSessionKeys(address);
+        setSessionKeys(mockKeys);
+      } else {
+        setSessionKeys(keys);
+      }
+    }
+  }, [account, address]);
 
   const totalEarnings = sessionKeys.reduce((sum, key) => sum + (key.earnings || 0), 0);
   const activeKeys = sessionKeys.filter(key => key.status === 'active').length;
@@ -142,16 +110,19 @@ export default function SessionKeyManager() {
     setLoading(prev => ({ ...prev, [keyId]: true }));
     
     try {
-      // TODO: Implement actual revocation logic
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setSessionKeys(prev => 
-        prev.map(key => 
-          key.id === keyId 
-            ? { ...key, status: 'revoked' as const }
-            : key
-        )
-      );
+      const sessionKey = sessionKeys.find(key => key.id === keyId);
+      if (sessionKey) {
+        await sessionKeyService.revokeSessionKey(sessionKey);
+        
+        // Update local state
+        setSessionKeys(prev => 
+          prev.map(key => 
+            key.id === keyId 
+              ? { ...key, status: 'revoked' as const }
+              : key
+          )
+        );
+      }
     } catch (error) {
       console.error('Failed to revoke session key:', error);
     } finally {
@@ -164,24 +135,21 @@ export default function SessionKeyManager() {
     // You could add a toast notification here
   };
 
-  const handleDownloadKey = (sessionKey: SessionKey) => {
-    const keyData = {
-      id: sessionKey.id,
-      description: sessionKey.description,
-      permissions: sessionKey.permissions,
-      expiresAt: sessionKey.expiresAt,
-      owner: address
-    };
-    
-    const blob = new Blob([JSON.stringify(keyData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `session-key-${sessionKey.id.slice(0, 8)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleDownloadKey = (sessionKey: StoredSessionKey) => {
+    try {
+      const exportData = sessionKeyService.exportSessionKey(sessionKey);
+      const blob = new Blob([exportData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `session-key-${sessionKey.id.slice(0, 8)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download session key:', error);
+    }
   };
 
   if (!account) {
