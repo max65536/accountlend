@@ -27,7 +27,7 @@ trait ISessionKeyMarketplace<TContractState> {
         self: @TContractState,
         offset: u32,
         limit: u32
-    ) -> Array<felt252>;
+    ) -> Span<felt252>;
     
     fn withdraw_earnings(
         ref self: TContractState,
@@ -40,7 +40,7 @@ trait ISessionKeyMarketplace<TContractState> {
     ) -> u256;
 }
 
-#[derive(Drop, Serde, starknet::Store)]
+#[derive(Drop, Serde, starknet::Store, Copy)]
 struct ListingInfo {
     session_key: felt252,
     owner: ContractAddress,
@@ -63,16 +63,18 @@ mod SessionKeyMarketplace {
     use super::{ISessionKeyMarketplace, ListingInfo, IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
     use core::array::ArrayTrait;
+    use core::num::traits::Zero;
+    use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
 
     #[storage]
     struct Storage {
         // Core marketplace data
-        listings: LegacyMap<felt252, ListingInfo>,
-        active_listings: LegacyMap<u32, felt252>,
+        listings: Map<felt252, ListingInfo>,
+        active_listings: Map<u32, felt252>,
         active_listings_count: u32,
         
         // User earnings tracking
-        user_earnings: LegacyMap<ContractAddress, u256>,
+        user_earnings: Map<ContractAddress, u256>,
         
         // Contract configuration
         session_key_manager: ContractAddress,
@@ -178,11 +180,11 @@ mod SessionKeyMarketplace {
         ) -> bool {
             let caller = get_caller_address();
             let current_time = get_block_timestamp();
-            let mut listing = self.listings.read(session_key);
+            let listing = self.listings.read(session_key);
             
             assert(listing.is_active, 'Listing not active');
             assert(listing.owner != caller, 'Cannot rent own session key');
-            assert(listing.rented_by.is_zero(), 'Already rented');
+            assert(listing.rented_by == Zero::zero(), 'Already rented');
             
             let payment_token = IERC20Dispatcher { 
                 contract_address: self.payment_token.read() 
@@ -202,9 +204,16 @@ mod SessionKeyMarketplace {
             assert(success, 'Payment transfer failed');
             
             // Update listing
-            listing.rented_by = caller;
-            listing.rented_at = current_time;
-            self.listings.write(session_key, listing);
+            let updated_listing = ListingInfo {
+                session_key: listing.session_key,
+                owner: listing.owner,
+                price: listing.price,
+                is_active: listing.is_active,
+                created_at: listing.created_at,
+                rented_by: caller,
+                rented_at: current_time,
+            };
+            self.listings.write(session_key, updated_listing);
             
             // Add to owner's earnings
             let current_earnings = self.user_earnings.read(listing.owner);
@@ -225,14 +234,22 @@ mod SessionKeyMarketplace {
             session_key: felt252
         ) {
             let caller = get_caller_address();
-            let mut listing = self.listings.read(session_key);
+            let listing = self.listings.read(session_key);
             
             assert(listing.owner == caller, 'Not listing owner');
             assert(listing.is_active, 'Listing not active');
-            assert(listing.rented_by.is_zero(), 'Cannot cancel rented session');
+            assert(listing.rented_by == Zero::zero(), 'Cannot cancel rented session');
             
-            listing.is_active = false;
-            self.listings.write(session_key, listing);
+            let updated_listing = ListingInfo {
+                session_key: listing.session_key,
+                owner: listing.owner,
+                price: listing.price,
+                is_active: false,
+                created_at: listing.created_at,
+                rented_by: listing.rented_by,
+                rented_at: listing.rented_at,
+            };
+            self.listings.write(session_key, updated_listing);
             
             self.emit(ListingCancelled {
                 session_key,
@@ -251,7 +268,7 @@ mod SessionKeyMarketplace {
             self: @ContractState,
             offset: u32,
             limit: u32
-        ) -> Array<felt252> {
+        ) -> Span<felt252> {
             let mut listings = ArrayTrait::new();
             let total_count = self.active_listings_count.read();
             let end = if offset + limit > total_count { total_count } else { offset + limit };
@@ -261,14 +278,14 @@ mod SessionKeyMarketplace {
                 let session_key = self.active_listings.read(i);
                 let listing = self.listings.read(session_key);
                 
-                if listing.is_active && listing.rented_by.is_zero() {
+                if listing.is_active && listing.rented_by == Zero::zero() {
                     listings.append(session_key);
                 }
                 
                 i += 1;
             };
             
-            listings
+            listings.span()
         }
 
         fn withdraw_earnings(
