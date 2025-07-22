@@ -21,6 +21,7 @@ import { sessionKeyService, StoredSessionKey } from "../services/sessionKeyServi
 import { cacheService } from "../services/cacheService";
 import { batchContractCall } from "../services/batchService";
 import { paginationService, createPaginationState, PaginationState } from "../services/paginationService";
+import { getSampleMarketplaceData } from "../utils/testDataLoader";
 import { Account } from "starknet";
 
 interface SessionKeyListing {
@@ -353,14 +354,151 @@ export default function AccountMarket() {
         setDivContent("New session key created successfully!");
     };
 
+    // Load test data when no wallet is connected
+    const [testData, setTestData] = useState<any>(null);
+    
+    useEffect(() => {
+        if (!account.address) {
+            const sampleData = getSampleMarketplaceData();
+            setTestData(sampleData);
+        }
+    }, [account.address]);
+
     if (!account.address) {
         return (
-            <div className="text-center py-12">
-                <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Connect Your Wallet</h3>
-                <p className="text-gray-600">
-                    Please connect your Starknet wallet to access the marketplace
-                </p>
+            <div className="space-y-6">
+                {/* Demo Banner */}
+                <div className="text-center py-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                    <Shield className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Session Key Marketplace Demo</h3>
+                    <p className="text-gray-600 mb-4">
+                        Explore the marketplace with sample data. Connect your wallet for full functionality.
+                    </p>
+                    <Badge variant="outline" className="bg-white">
+                        Demo Mode - Sample Data
+                    </Badge>
+                </div>
+
+                {/* Demo Stats */}
+                {testData?.stats && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-4 bg-white rounded-lg border">
+                            <div className="text-2xl font-bold text-blue-600">{testData.stats.activeListings}</div>
+                            <div className="text-sm text-gray-600">Active Listings</div>
+                        </div>
+                        <div className="text-center p-4 bg-white rounded-lg border">
+                            <div className="text-2xl font-bold text-green-600">{testData.stats.totalVolume} ETH</div>
+                            <div className="text-sm text-gray-600">Total Volume</div>
+                        </div>
+                        <div className="text-center p-4 bg-white rounded-lg border">
+                            <div className="text-2xl font-bold text-purple-600">{testData.stats.categories.length}</div>
+                            <div className="text-sm text-gray-600">Categories</div>
+                        </div>
+                        <div className="text-center p-4 bg-white rounded-lg border">
+                            <div className="text-2xl font-bold text-orange-600">{testData.stats.averagePrice} ETH</div>
+                            <div className="text-sm text-gray-600">Avg Price</div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Demo Session Keys */}
+                <div>
+                    <h3 className="text-lg font-semibold mb-4">Available Session Keys</h3>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {testData?.listings?.map((listing: any, index: number) => {
+                            const typeInfo = getTaskTypeInfo('buy');
+                            const IconComponent = typeInfo.icon;
+
+                            return (
+                                <Card key={listing.sessionKey} className="hover:shadow-lg transition-shadow border-2 border-dashed border-gray-200">
+                                    <CardHeader className="pb-3">
+                                        <div className="flex items-start justify-between">
+                                            <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700">
+                                                <IconComponent className="w-3 h-3" />
+                                                Demo Listing
+                                            </Badge>
+                                            <div className="text-right">
+                                                <div className="text-lg font-bold text-gray-900">
+                                                    {listing.price} ETH
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                    {listing.duration}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <CardTitle className="text-base line-clamp-2">
+                                            {listing.description}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    
+                                    <CardContent className="space-y-4">
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                <User className="w-4 h-4" />
+                                                <span>From: {listing.owner.slice(0, 8)}...</span>
+                                            </div>
+                                            
+                                            {listing.permissions && (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {listing.permissions.map((permission: string, permIndex: number) => (
+                                                        <Badge key={permIndex} variant="outline" className="text-xs">
+                                                            {permission}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {listing.category && (
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        {listing.category}
+                                                    </Badge>
+                                                    {listing.isHot && (
+                                                        <Badge variant="destructive" className="text-xs">
+                                                            🔥 Hot
+                                                        </Badge>
+                                                    )}
+                                                    {listing.isFeatured && (
+                                                        <Badge variant="default" className="text-xs">
+                                                            ⭐ Featured
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <Button
+                                            size="sm"
+                                            disabled
+                                            className="flex items-center gap-1 w-full opacity-50"
+                                        >
+                                            <DollarSign className="w-3 h-3" />
+                                            Connect Wallet to Rent
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Call to Action */}
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <h4 className="text-lg font-semibold mb-2">Ready to Get Started?</h4>
+                    <p className="text-gray-600 mb-4">
+                        Connect your Starknet wallet to create, rent, and manage session keys
+                    </p>
+                    <div className="flex justify-center gap-4">
+                        <Button variant="outline" className="flex items-center gap-2">
+                            <Shield className="w-4 h-4" />
+                            Connect Wallet
+                        </Button>
+                        <Button className="flex items-center gap-2">
+                            <Plus className="w-4 h-4" />
+                            Learn More
+                        </Button>
+                    </div>
+                </div>
             </div>
         );
     }
