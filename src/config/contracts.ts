@@ -1,9 +1,9 @@
 // Contract configuration for different networks
 export const CONTRACT_ADDRESSES = {
-  // Starknet Testnet (Goerli)
+  // Starknet Testnet (Sepolia)
   testnet: {
-    ACCOUNT_MARKET: "0x0", // To be updated when deployed
-    SESSION_KEY_MANAGER: "0x0", // To be updated when deployed
+    ACCOUNT_MARKET: "0x0511ad831feb72aecb3f6bb4d2207b323224ab8bd6cda7bfc66f03f1635a7630", // SessionKeyMarketplace deployed
+    SESSION_KEY_MANAGER: "0x038aad77e374b20f0ff285a3912b5d9ff75f1137c5cb624975a65ee9093a78f4", // SessionKeyManager deployed
     ERC20_ETH: "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", // ETH on testnet
   },
   // Starknet Mainnet

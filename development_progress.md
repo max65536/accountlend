@@ -54,7 +54,7 @@ A Session Key Marketplace built on Starknet that allows users to lend and rent t
 
 ### 🚧 IN PROGRESS TASKS
 
-#### Smart Contract Deployment
+#### Smart Contract Deployment ✅ COMPLETED
 - [x] Install and configure Scarb (Cairo package manager)
 - [x] Install Starknet Foundry (deployment tools)
 - [x] Fix Cairo contract compilation errors
@@ -62,11 +62,15 @@ A Session Key Marketplace built on Starknet that allows users to lend and rent t
 - [x] Create Starknet testnet account for deployment
   - Account Address: `0x0452183071ba5cb3fe2691ffa5541915262b15dc8cdbce3ac5175344f31f8b31`
   - Network: Starknet Sepolia Testnet
-  - Status: Created but needs funding for deployment
-- [ ] Fund account with testnet STRK tokens
-- [ ] Deploy SessionKeyManager contract to testnet
-- [ ] Deploy SessionKeyMarketplace contract to testnet
-- [ ] Update frontend configuration with deployed contract addresses
+  - Status: Successfully deployed
+- [x] Fund account with testnet STRK tokens
+- [x] Deploy SessionKeyManager contract to testnet
+  - Contract Address: `0x038aad77e374b20f0ff285a3912b5d9ff75f1137c5cb624975a65ee9093a78f4`
+  - Class Hash: `0x75af700048bb4f14218d85e0e309697ae9c292bb583677b0f992e1908c51866`
+- [x] Deploy SessionKeyMarketplace contract to testnet
+  - Contract Address: `0x0511ad831feb72aecb3f6bb4d2207b323224ab8bd6cda7bfc66f03f1635a7630`
+  - Class Hash: `0x6d2c9fffb6612870da4f8e8cd2a8424300e74e9ff037169f18dc8e9f20193ca`
+- [x] Update frontend configuration with deployed contract addresses
 
 #### Session Key Implementation
 - [x] Complete session key creation UI components
@@ -229,8 +233,8 @@ Frontend (Next.js) → Starknet.js → Wallet → Starknet Network
 
 ---
 
-*Last Updated: 2025-01-21 18:26 UTC*
-*Status: Ready for Contract Deployment - All Components Built Successfully*
+*Last Updated: 2025-01-22 10:56 UTC*
+*Status: CONTRACTS DEPLOYED SUCCESSFULLY - Ready for Frontend Integration*
 
 ## Recent Achievements (Current Session)
 
@@ -283,7 +287,7 @@ Frontend (Next.js) → Starknet.js → Wallet → Starknet Network
   - Error handling and fallback mechanisms
   - Type-safe contract calls with proper formatting
 
-**Next Priority**: Fund deployment account and deploy contracts to Starknet Sepolia testnet.
+**Next Priority**: Test contract interactions from frontend and integrate with @argent/x-sessions.
 
 ### Latest Progress (Current Session)
 
@@ -307,4 +311,14 @@ Frontend (Next.js) → Starknet.js → Wallet → Starknet Network
 4. **Update frontend configuration** with deployed contract addresses
 5. **Test contract interactions** from the frontend application
 
-The project is now at a critical milestone - all smart contracts are compiled and ready for deployment to Starknet testnet!
+🎉 **MAJOR MILESTONE ACHIEVED** - All smart contracts are now live on Starknet Sepolia testnet!
+
+### Deployment Success ✅
+- **SessionKeyManager**: `0x038aad77e374b20f0ff285a3912b5d9ff75f1137c5cb624975a65ee9093a78f4`
+- **SessionKeyMarketplace**: `0x0511ad831feb72aecb3f6bb4d2207b323224ab8bd6cda7bfc66f03f1635a7630`
+- **Network**: Starknet Sepolia Testnet
+- **Explorer Links**:
+  - [SessionKeyManager](https://sepolia.starkscan.co/contract/0x038aad77e374b20f0ff285a3912b5d9ff75f1137c5cb624975a65ee9093a78f4)
+  - [SessionKeyMarketplace](https://sepolia.starkscan.co/contract/0x0511ad831feb72aecb3f6bb4d2207b323224ab8bd6cda7bfc66f03f1635a7630)
+
+The AccountLend Session Key Marketplace is now ready for live testing and user interactions!
