@@ -83,10 +83,10 @@ export default function SessionKeyCreator() {
         expires: Date.now() + (sessionData.duration * 3600 * 1000)
       });
 
-      // Try to create session key using smart contract
+      // Import contract utilities
+      const { createSessionKey, handleContractError, waitForTransaction } = await import('../utils/contractUtils');
+      
       try {
-        const { createSessionKey, handleContractError } = await import('../utils/contractUtils');
-        
         // Convert AccountInterface to Account for contract interaction
         const accountForContract = account as any; // Type assertion for compatibility
         
@@ -97,38 +97,61 @@ export default function SessionKeyCreator() {
           sessionData.price
         );
         
-        console.log('Session key created with transaction hash:', txHash);
-        setSuccess(true);
+        console.log('Session key creation transaction submitted:', txHash);
+        setError(null);
+        
+        // Wait for transaction confirmation
+        const confirmed = await waitForTransaction(txHash);
+        
+        if (confirmed) {
+          console.log('Session key created successfully');
+          setSuccess(true);
+          
+          // Reset form after success
+          setTimeout(() => {
+            setSuccess(false);
+            setSessionData({
+              duration: 24,
+              permissions: ['transfer'],
+              price: '0.001',
+              description: ''
+            });
+          }, 3000);
+        } else {
+          throw new Error('Transaction failed or was rejected');
+        }
         
       } catch (contractError) {
-        // If contracts aren't deployed, fall back to simulation
-        const { handleContractError } = await import('../utils/contractUtils');
+        console.error('Contract interaction failed:', contractError);
         const errorMessage = handleContractError(contractError);
         
-        if (errorMessage.includes('not deployed')) {
-          console.log('Contracts not deployed, using simulation mode');
-          // Simulate session key creation
+        if (errorMessage.includes('not deployed') || errorMessage.includes('not found')) {
+          console.log('Contracts not fully deployed, using simulation mode');
+          // Simulate session key creation for demo purposes
           await new Promise(resolve => setTimeout(resolve, 2000));
           setSuccess(true);
+          setError('Demo mode: Session key created locally (contracts not fully deployed)');
+          
+          // Reset form after success
+          setTimeout(() => {
+            setSuccess(false);
+            setError(null);
+            setSessionData({
+              duration: 24,
+              permissions: ['transfer'],
+              price: '0.001',
+              description: ''
+            });
+          }, 3000);
         } else {
-          throw contractError;
+          throw new Error(errorMessage);
         }
       }
       
-      // Reset form after success
-      setTimeout(() => {
-        setSuccess(false);
-        setSessionData({
-          duration: 24,
-          permissions: ['transfer'],
-          price: '0.001',
-          description: ''
-        });
-      }, 3000);
-      
     } catch (err) {
-      setError('Failed to create session key: ' + (err as Error).message);
-      console.error(err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError('Failed to create session key: ' + errorMessage);
+      console.error('Session key creation failed:', err);
     } finally {
       setLoading(false);
     }
@@ -154,9 +177,23 @@ export default function SessionKeyCreator() {
         <p className="text-gray-600 mb-4">
           Your session key has been created and is now available in the marketplace
         </p>
-        <Badge variant="secondary" className="mb-4">
-          Duration: {sessionData.duration}h | Price: {sessionData.price} ETH
-        </Badge>
+        <div className="space-y-2 mb-6">
+          <Badge variant="secondary">
+            Duration: {sessionData.duration}h | Price: {sessionData.price} ETH
+          </Badge>
+          <div className="text-sm text-gray-600">
+            Permissions: {sessionData.permissions.join(', ')}
+          </div>
+        </div>
+        <Button
+          onClick={() => {
+            setSuccess(false);
+            setError(null);
+          }}
+          variant="outline"
+        >
+          Create Another Session Key
+        </Button>
       </div>
     );
   }
@@ -275,10 +312,21 @@ export default function SessionKeyCreator() {
         </CardContent>
       </Card>
 
-      {/* Error Display */}
+      {/* Status Messages */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-800">{error}</p>
+        </div>
+      )}
+
+      {loading && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+            <p className="text-blue-800">
+              Creating session key on Starknet... This may take a few moments.
+            </p>
+          </div>
         </div>
       )}
 
@@ -298,8 +346,8 @@ export default function SessionKeyCreator() {
             
             <Button
               onClick={handleCreateSessionKey}
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              disabled={loading || !sessionData.description.trim() || sessionData.permissions.length === 0}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
               size="lg"
             >
               {loading ? (
@@ -314,6 +362,10 @@ export default function SessionKeyCreator() {
                 </>
               )}
             </Button>
+            
+            <p className="text-xs text-gray-500 text-center mt-2">
+              This will create a session key on Starknet Sepolia testnet
+            </p>
           </div>
         </CardContent>
       </Card>

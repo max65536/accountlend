@@ -94,27 +94,49 @@ A Session Key Marketplace built on Starknet that allows users to lend and rent t
 - [x] Build contract utility functions
 - [x] Integrate contracts with frontend components
 
+### 🚧 CURRENT PRIORITY TASKS
+
+#### Critical - Frontend Integration with Deployed Contracts
+- [ ] **Connect Frontend to Live Contracts**
+  - [ ] Update contract utility functions to use deployed addresses
+  - [ ] Replace mock data in AccountMarket with live blockchain queries
+  - [ ] Connect SessionKeyCreator to deployed SessionKeyManager contract
+  - [ ] Connect SessionKeyManager component to live contract state
+  - [ ] Test contract interactions with real wallet connections
+
+- [ ] **Session Key Integration**
+  - [ ] Complete @argent/x-sessions library integration
+  - [ ] Implement real session key creation flow
+  - [ ] Add session key validation with deployed contracts
+  - [ ] Enable session key encryption and secure storage
+
+- [ ] **Marketplace Functionality**
+  - [ ] Connect marketplace listings to deployed contract
+  - [ ] Implement real session key rental transactions
+  - [ ] Add earnings withdrawal functionality
+  - [ ] Test end-to-end marketplace operations
+
+#### High Priority - User Experience
+- [ ] **Transaction Management**
+  - [ ] Add transaction status tracking and notifications
+  - [ ] Implement proper loading states for contract calls
+  - [ ] Add error handling for failed transactions
+  - [ ] Show transaction confirmations and receipts
+
+- [ ] **Data Management**
+  - [ ] Replace all mock data with blockchain state
+  - [ ] Add real-time updates from contract events
+  - [ ] Implement persistent storage for user sessions
+  - [ ] Add transaction history tracking
+
 ### ❌ TODO TASKS
 
-#### High Priority
-- [ ] **Smart Contract Development**
-  - [ ] Design session key contract architecture
-  - [ ] Implement session creation and validation
-  - [ ] Add policy enforcement (time limits, action restrictions)
-  - [ ] Create marketplace contract for trading sessions
-  - [ ] Add emergency cancellation functionality
-
+#### Medium Priority
 - [ ] **Security Implementation**
   - [ ] Implement proper key encryption/decryption
   - [ ] Add session expiration validation
   - [ ] Secure key transfer mechanism
   - [ ] Input validation and sanitization
-
-- [ ] **Core Functionality**
-  - [ ] Complete session key creation flow
-  - [ ] Implement session key validation
-  - [ ] Add real-time marketplace state management
-  - [ ] Connect frontend to deployed contracts
 
 #### Medium Priority
 - [ ] **User Experience**
@@ -147,9 +169,11 @@ A Session Key Marketplace built on Starknet that allows users to lend and rent t
 ## Current Issues & Blockers
 
 ### Critical Issues
-1. ~~**Missing Smart Contracts**: Only placeholder Fibonacci function exists~~ ✅ **RESOLVED**: Complete Cairo smart contracts implemented
-2. **Incomplete Session Integration**: @argent/x-sessions not fully implemented
-3. **No Contract Deployment**: No evidence of deployed contracts on Starknet
+1. ~~**Missing Smart Contracts**: Only placeholder Fibonacci function exists~~ ✅ **RESOLVED**: Complete Cairo smart contracts implemented and deployed
+2. ~~**No Contract Deployment**: No evidence of deployed contracts on Starknet~~ ✅ **RESOLVED**: Contracts successfully deployed to Starknet Sepolia testnet
+3. **Frontend-Contract Disconnect**: Frontend still using mock data instead of deployed contracts
+4. **Incomplete Session Integration**: @argent/x-sessions not fully implemented
+5. **No Live Testing**: Contract interactions not tested with real wallets
 
 ### Technical Debt
 1. **Hardcoded Values**: Mock data instead of blockchain state

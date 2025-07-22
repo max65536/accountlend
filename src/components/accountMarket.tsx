@@ -1,12 +1,35 @@
 "use client"
 import { useState, useMemo, useEffect } from "react";
-import { Clock, Shield, User, Plus, X, DollarSign } from "lucide-react";
+import { Clock, Shield, User, Plus, X, DollarSign, RefreshCw, AlertCircle } from "lucide-react";
 import SendButton from "./tasksend";
 import PayButton from "./taskpay";
 import { useAccount } from "@starknet-react/core";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { 
+    getActiveListings, 
+    getSessionKeyInfo, 
+    rentSessionKey, 
+    handleContractError,
+    formatWeiToEth,
+    formatTimestamp,
+    parsePermissions
+} from "../utils/contractUtils";
+import { Account } from "starknet";
+
+interface SessionKeyListing {
+    sessionKey: string;
+    owner: string;
+    price: string;
+    isActive: boolean;
+    createdAt: number;
+    expiresAt: number;
+    permissions: string[];
+    description?: string;
+    duration?: string;
+    type: 'available' | 'owned' | 'rented';
+}
 
 interface Task {
     id: number;
@@ -55,6 +78,12 @@ const getTaskTypeInfo = (type: string) => {
 export default function AccountMarket() {
     const account = useAccount();
     const [divContent, setDivContent] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [listings, setListings] = useState<SessionKeyListing[]>([]);
+    const [useMockData, setUseMockData] = useState(true);
+    
+    // Mock data fallback
     const [tasks, setTasks] = useState<Task[]>([
         {
             id: 1,
@@ -88,6 +117,71 @@ export default function AccountMarket() {
         },
     ]);
 
+    // Load listings from deployed contracts
+    const loadListings = async () => {
+        if (!account.account) return;
+        
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+            // Try to fetch from deployed contracts
+            const activeListings = await getActiveListings(account.account as Account, 0, 20);
+            
+            if (activeListings.length > 0) {
+                const listingsWithDetails = await Promise.all(
+                    activeListings.map(async (sessionKey: string) => {
+                        try {
+                            const info = await getSessionKeyInfo(account.account as Account, sessionKey);
+                            const currentTime = Math.floor(Date.now() / 1000);
+                            
+                            return {
+                                sessionKey,
+                                owner: info.owner,
+                                price: formatWeiToEth(info.price.toString()),
+                                isActive: info.is_active && currentTime < info.expires_at,
+                                createdAt: info.created_at,
+                                expiresAt: info.expires_at,
+                                permissions: parsePermissions(info.permissions || []),
+                                description: `Session key with ${parsePermissions(info.permissions || []).join(', ')} permissions`,
+                                duration: `${Math.floor((info.expires_at - currentTime) / 3600)} hours remaining`,
+                                type: info.owner === account.address ? 'owned' : 'available'
+                            } as SessionKeyListing;
+                        } catch (err) {
+                            console.error('Failed to get session key info:', err);
+                            return null;
+                        }
+                    })
+                );
+                
+                const validListings = listingsWithDetails.filter(listing => listing !== null) as SessionKeyListing[];
+                setListings(validListings);
+                setUseMockData(false);
+                setDivContent(`Loaded ${validListings.length} session keys from blockchain`);
+            } else {
+                // No listings found, but contracts are working
+                setListings([]);
+                setUseMockData(false);
+                setDivContent('No active session keys found on the marketplace');
+            }
+        } catch (err) {
+            console.error('Failed to load listings:', err);
+            const errorMessage = handleContractError(err);
+            setError(errorMessage);
+            setUseMockData(true);
+            setDivContent(`Using mock data: ${errorMessage}`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Load listings on component mount and account change
+    useEffect(() => {
+        if (account.account) {
+            loadListings();
+        }
+    }, [account.account]);
+
     const acceptTask = (task: Task) => {
         console.log('Processing task', task);
         switch (task.type) {
@@ -105,6 +199,28 @@ export default function AccountMarket() {
                 return {};
             default:
                 return {};
+        }
+    };
+
+    // Rent session key from blockchain
+    const handleRentSessionKey = async (sessionKey: string) => {
+        if (!account.account) return;
+        
+        setIsLoading(true);
+        try {
+            const txHash = await rentSessionKey(account.account as Account, sessionKey);
+            setDivContent(`Session key rental transaction submitted: ${txHash.slice(0, 10)}...`);
+            
+            // Refresh listings after successful transaction
+            setTimeout(() => {
+                loadListings();
+            }, 3000);
+        } catch (err) {
+            const errorMessage = handleContractError(err);
+            setError(errorMessage);
+            setDivContent(`Failed to rent session key: ${errorMessage}`);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -142,38 +258,149 @@ export default function AccountMarket() {
                 <div>
                     <h3 className="text-lg font-semibold">Session Key Marketplace</h3>
                     <p className="text-sm text-gray-600">
-                        {tasks.length} session keys available
+                        {useMockData ? `${tasks.length} mock session keys` : `${listings.length} live session keys`}
+                        {useMockData && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                                Mock Data
+                            </Badge>
+                        )}
                     </p>
                 </div>
-                <Button
-                    onClick={() => addTask("New session key for lending", 0.001)}
-                    className="flex items-center gap-2"
-                >
-                    <Plus className="w-4 h-4" />
-                    Create Session Key
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={loadListings}
+                        disabled={isLoading || !account.account}
+                        className="flex items-center gap-2"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                    <Button
+                        onClick={() => addTask("New session key for lending", 0.001)}
+                        className="flex items-center gap-2"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Create Session Key
+                    </Button>
+                </div>
             </div>
 
-            {/* Status Message */}
-            {divContent && (
+            {/* Status Messages */}
+            {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                    <p className="text-red-800">{error}</p>
+                </div>
+            )}
+            
+            {divContent && !error && (
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-green-800">{divContent}</p>
                 </div>
             )}
 
-            {/* Task Grid */}
+            {isLoading && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+                    <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+                    <p className="text-blue-800">Loading session keys from blockchain...</p>
+                </div>
+            )}
+
+            {/* Session Keys Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {tasks.map(task => {
-                    const typeInfo = getTaskTypeInfo(task.type);
+                {/* Live blockchain data */}
+                {!useMockData && listings.map(listing => {
+                    const typeInfo = getTaskTypeInfo(listing.type === 'owned' ? 'ready' : 'buy');
                     const IconComponent = typeInfo.icon;
 
                     return (
-                        <Card key={task.id} className="hover:shadow-lg transition-shadow">
+                        <Card key={listing.sessionKey} className="hover:shadow-lg transition-shadow">
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <Badge variant={typeInfo.variant} className="flex items-center gap-1">
                                         <IconComponent className="w-3 h-3" />
-                                        {typeInfo.label}
+                                        {listing.type === 'owned' ? 'Your Session Key' : 'Available to Rent'}
+                                    </Badge>
+                                    <div className="text-right">
+                                        <div className="text-lg font-bold text-gray-900">
+                                            {listing.price} ETH
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                            {listing.duration}
+                                        </div>
+                                    </div>
+                                </div>
+                                <CardTitle className="text-base line-clamp-2">
+                                    {listing.description}
+                                </CardTitle>
+                            </CardHeader>
+                            
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <User className="w-4 h-4" />
+                                        <span>From: {listing.owner === account.address ? "You" : listing.owner.slice(0, 8) + "..."}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <Clock className="w-4 h-4" />
+                                        <span>Expires: {formatTimestamp(listing.expiresAt)}</span>
+                                    </div>
+                                    
+                                    {listing.permissions && (
+                                        <div className="flex flex-wrap gap-1">
+                                            {listing.permissions.map((permission, index) => (
+                                                <Badge key={index} variant="outline" className="text-xs">
+                                                    {permission}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-2">
+                                    {listing.type === 'available' && (
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleRentSessionKey(listing.sessionKey)}
+                                            disabled={isLoading}
+                                            className="flex items-center gap-1 w-full"
+                                        >
+                                            <DollarSign className="w-3 h-3" />
+                                            Rent Session Key
+                                        </Button>
+                                    )}
+                                    {listing.type === 'owned' && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled
+                                            className="flex items-center gap-1 w-full"
+                                        >
+                                            <Shield className="w-3 h-3" />
+                                            Your Session Key
+                                        </Button>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    );
+                })}
+
+                {/* Mock data fallback */}
+                {useMockData && tasks.map(task => {
+                    const typeInfo = getTaskTypeInfo(task.type);
+                    const IconComponent = typeInfo.icon;
+
+                    return (
+                        <Card key={task.id} className="hover:shadow-lg transition-shadow opacity-75">
+                            <CardHeader className="pb-3">
+                                <div className="flex items-start justify-between">
+                                    <Badge variant={typeInfo.variant} className="flex items-center gap-1">
+                                        <IconComponent className="w-3 h-3" />
+                                        {typeInfo.label} (Mock)
                                     </Badge>
                                     <div className="text-right">
                                         <div className="text-lg font-bold text-gray-900">
@@ -235,7 +462,25 @@ export default function AccountMarket() {
                 })}
             </div>
 
-            {tasks.length === 0 && (
+            {/* Empty State */}
+            {!useMockData && listings.length === 0 && !isLoading && (
+                <div className="text-center py-12">
+                    <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">No Session Keys Available</h3>
+                    <p className="text-gray-600 mb-6">
+                        No active session keys found on the marketplace. Be the first to create one!
+                    </p>
+                    <Button
+                        onClick={() => addTask("My first session key", 0.001)}
+                        className="flex items-center gap-2"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Create First Session Key
+                    </Button>
+                </div>
+            )}
+
+            {useMockData && tasks.length === 0 && (
                 <div className="text-center py-12">
                     <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold mb-2">No Session Keys Available</h3>
