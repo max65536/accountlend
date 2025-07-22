@@ -1,17 +1,19 @@
 import Head from 'next/head';
 import { useState } from 'react';
-import { Wallet, Shield, Clock, Users, ArrowRight, Plus } from 'lucide-react';
+import { Wallet, Shield, Clock, Users, ArrowRight, Plus, History } from 'lucide-react';
 import WalletBar from '@/components/WalletBar';
 import { StarknetProvider } from '@/components/starknet-provider';
 import AccountMarket from '@/components/accountMarket';
 import SessionKeyCreator from '@/components/SessionKeyCreator';
 import SessionKeyManager from '@/components/SessionKeyManager';
+import TransactionHistory from '@/components/TransactionHistory';
+import NotificationCenter from '@/components/NotificationCenter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 function Home() {
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'create' | 'manage'>('marketplace');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'create' | 'manage' | 'history'>('marketplace');
 
   const features = [
     {
@@ -61,7 +63,10 @@ function Home() {
             </nav>
 
             <StarknetProvider>
-              <WalletBar />
+              <div className="flex items-center gap-3">
+                <NotificationCenter />
+                <WalletBar />
+              </div>
             </StarknetProvider>
           </div>
         </div>
@@ -144,6 +149,13 @@ function Home() {
               >
                 Manage Keys
               </Button>
+              <Button
+                variant={activeTab === 'history' ? 'default' : 'ghost'}
+                onClick={() => setActiveTab('history')}
+                className="rounded-md"
+              >
+                History
+              </Button>
             </div>
           </div>
 
@@ -204,6 +216,12 @@ function Home() {
                   </StarknetProvider>
                 </CardContent>
               </Card>
+            )}
+
+            {activeTab === 'history' && (
+              <StarknetProvider>
+                <TransactionHistory />
+              </StarknetProvider>
             )}
           </div>
         </div>

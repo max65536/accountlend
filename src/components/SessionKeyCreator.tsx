@@ -83,8 +83,9 @@ export default function SessionKeyCreator() {
         expires: Date.now() + (sessionData.duration * 3600 * 1000)
       });
 
-      // Import session key service
+      // Import services
       const { sessionKeyService } = await import('../services/sessionKeyService');
+      const { transactionService } = await import('../services/transactionService');
       
       try {
         // Create session key using the new service
@@ -97,6 +98,17 @@ export default function SessionKeyCreator() {
         );
         
         console.log('Session key created successfully:', sessionKey);
+        
+        // Add transaction to tracking (simulate transaction hash for demo)
+        const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+        transactionService.addTransaction({
+          hash: mockTxHash,
+          type: 'session_create',
+          description: `Create session key: ${sessionData.description}`,
+          amount: sessionData.price,
+          sessionKeyId: sessionKey.id
+        });
+        
         setSuccess(true);
         
         // Reset form after success
@@ -115,6 +127,17 @@ export default function SessionKeyCreator() {
         
         // For demo purposes, create a mock session key if real creation fails
         console.log('Creating mock session key for demo');
+        
+        // Add failed transaction to tracking
+        const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+        transactionService.addTransaction({
+          hash: mockTxHash,
+          type: 'session_create',
+          description: `Create session key: ${sessionData.description}`,
+          amount: sessionData.price,
+          error: 'Demo mode - Argent X Sessions integration in progress'
+        });
+        
         await new Promise(resolve => setTimeout(resolve, 2000));
         setSuccess(true);
         setError('Demo mode: Session key created locally (Argent X Sessions integration in progress)');
