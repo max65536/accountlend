@@ -1,17 +1,45 @@
 import Head from 'next/head';
 import { useState } from 'react';
 import { Wallet, Shield, Clock, Users, ArrowRight, Plus, History } from 'lucide-react';
-import WalletBar from '@/components/WalletBar';
 import { StarknetProvider } from '@/components/starknet-provider';
-import AccountMarket from '@/components/accountMarket';
-import SessionKeyCreator from '@/components/SessionKeyCreator';
-import SessionKeyManager from '@/components/SessionKeyManager';
-import TransactionHistory from '@/components/TransactionHistory';
-import NotificationCenter from '@/components/NotificationCenter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { NetworkSwitcher } from '@/components/NetworkSwitcher';
+import dynamic from 'next/dynamic';
+import { WalletBarSkeleton, NetworkSwitcherSkeleton, NotificationCenterSkeleton } from '@/components/WalletSkeleton';
+
+// 使用 dynamic import 加载钱包相关组件
+const WalletBar = dynamic(() => import('@/components/WalletBar'), {
+  ssr: false,
+  loading: () => <WalletBarSkeleton />
+});
+
+const NetworkSwitcher = dynamic(() => import('@/components/NetworkSwitcher').then(mod => ({ default: mod.NetworkSwitcher })), {
+  ssr: false,
+  loading: () => <NetworkSwitcherSkeleton />
+});
+
+const NotificationCenter = dynamic(() => import('@/components/NotificationCenter'), {
+  ssr: false,
+  loading: () => <NotificationCenterSkeleton />
+});
+
+// 其他组件也可以使用 dynamic import，但不是必须的
+const AccountMarket = dynamic(() => import('@/components/accountMarket'), {
+  ssr: false
+});
+
+const SessionKeyCreator = dynamic(() => import('@/components/SessionKeyCreator'), {
+  ssr: false
+});
+
+const SessionKeyManager = dynamic(() => import('@/components/SessionKeyManager'), {
+  ssr: false
+});
+
+const TransactionHistory = dynamic(() => import('@/components/TransactionHistory'), {
+  ssr: false
+});
 
 function Home() {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'create' | 'manage' | 'history'>('marketplace');

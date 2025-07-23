@@ -42,11 +42,6 @@ export function NetworkSwitcher() {
           </div>
         </div>
       </div>
-      {isMainnet && (
-        <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded">
-          ⚠️ Contracts not deployed
-        </div>
-      )}
     </div>
   );
 }
