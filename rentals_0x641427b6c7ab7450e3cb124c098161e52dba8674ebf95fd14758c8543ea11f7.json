@@ -1,0 +1,64 @@
+[
+  {
+    "rentalId": "rental_1753167369916_d2f7d026w",
+    "listingId": "listing_1753167369881_7zt5md03y",
+    "sessionKeyId": "session_1753167369881_bmti5icau",
+    "renter": "0x641427b6c7ab7450e3cb124c098161e52dba8674ebf95fd14758c8543ea11f7",
+    "owner": "0xf2d38599077956e8ba56f4765a81e7b0dbc10c7a58b910b4a707014579381a6",
+    "price": "0.001",
+    "rentedAt": 1753156569916,
+    "expiresAt": 1753253769916,
+    "status": "active",
+    "transactionHash": "0x27c8516ee9489",
+    "formattedPrice": "0.001 ETH",
+    "formattedDuration": "1d",
+    "description": "DeFi Trading Session - Swap & Transfer",
+    "permissions": [
+      "transfer",
+      "swap"
+    ],
+    "category": "DeFi"
+  },
+  {
+    "rentalId": "rental_1753167369917_qes5c2y90",
+    "listingId": "listing_1753160169915_ygew42ysi",
+    "sessionKeyId": "session_1753160169915_q201k3m1q",
+    "renter": "0x641427b6c7ab7450e3cb124c098161e52dba8674ebf95fd14758c8543ea11f7",
+    "owner": "0xb22eaea2ba5e639b1364e257ea838e44d8185175b6d416f03460ae71a256150",
+    "price": "0.002",
+    "rentedAt": 1753160169916,
+    "expiresAt": 1753340169916,
+    "status": "active",
+    "transactionHash": "0x3bca434f9aaf1",
+    "formattedPrice": "0.002 ETH",
+    "formattedDuration": "2d",
+    "description": "NFT Trading Session - Marketplace Access",
+    "permissions": [
+      "nft",
+      "approve",
+      "transfer"
+    ],
+    "category": "NFT"
+  },
+  {
+    "rentalId": "rental_1753167369918_9wccmqt7q",
+    "listingId": "listing_1753156569915_b9pybsv6s",
+    "sessionKeyId": "session_1753156569915_2x92xwlfh",
+    "renter": "0x641427b6c7ab7450e3cb124c098161e52dba8674ebf95fd14758c8543ea11f7",
+    "owner": "0xf2d38599077956e8ba56f4765a81e7b0dbc10c7a58b910b4a707014579381a6",
+    "price": "0.0015",
+    "rentedAt": 1753163769916,
+    "expiresAt": 1753426569916,
+    "status": "active",
+    "transactionHash": "0x8183d3f85457f",
+    "formattedPrice": "0.0015 ETH",
+    "formattedDuration": "3d",
+    "description": "Staking Session - DeFi Yield Farming",
+    "permissions": [
+      "stake",
+      "transfer",
+      "swap"
+    ],
+    "category": "DeFi"
+  }
+]

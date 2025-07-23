@@ -14,13 +14,24 @@ export const CONTRACT_ADDRESSES = {
   }
 };
 
-// Current network configuration
-export const CURRENT_NETWORK = process.env.NODE_ENV === 'production' ? 'mainnet' : 'testnet';
+// Get current network from localStorage or default to testnet
+export const getCurrentNetwork = (): 'mainnet' | 'testnet' => {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('accountlend-network');
+    return (saved as 'mainnet' | 'testnet') || 'testnet';
+  }
+  // Fallback for server-side rendering
+  return (process.env.NEXT_PUBLIC_NETWORK as 'mainnet' | 'testnet') || 'testnet';
+};
 
 // Get contract address for current network
 export const getContractAddress = (contractName: keyof typeof CONTRACT_ADDRESSES.testnet) => {
-  return CONTRACT_ADDRESSES[CURRENT_NETWORK][contractName];
+  const currentNetwork = getCurrentNetwork();
+  return CONTRACT_ADDRESSES[currentNetwork][contractName];
 };
+
+// Legacy export for backward compatibility
+export const CURRENT_NETWORK = getCurrentNetwork();
 
 // Network configuration
 export const NETWORK_CONFIG = {
@@ -39,5 +50,6 @@ export const NETWORK_CONFIG = {
 };
 
 export const getCurrentNetworkConfig = () => {
-  return NETWORK_CONFIG[CURRENT_NETWORK];
+  const currentNetwork = getCurrentNetwork();
+  return NETWORK_CONFIG[currentNetwork];
 };

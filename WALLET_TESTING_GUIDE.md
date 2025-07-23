@@ -11,8 +11,11 @@ This guide explains how to connect wallets and test session key functionality in
 
 ### 2. Testnet Setup
 - Switch your wallet to **Starknet Sepolia Testnet**
-- Get testnet ETH from [Starknet Faucet](https://faucet.starknet.io/)
-- Ensure you have at least 0.01 ETH for transaction fees
+- Get testnet tokens from [Starknet Faucet](https://faucet.starknet.io/)
+  - **STRK tokens**: For testing transactions (recommended)
+  - **ETH tokens**: For transaction fees (required)
+- Ensure you have at least 0.01 ETH for transaction fees and some STRK for testing
+- **Note**: If you only have STRK and no ETH, you can still test most console functions except actual transactions
 
 ### 3. Application Setup
 ```bash
@@ -78,6 +81,35 @@ Permissions: Select "Transfer" and "Swap"
 #### Step 1: Open Developer Tools
 1. Press `F12` or right-click → "Inspect"
 2. Go to the **Console** tab
+
+#### Step 1.5: Check Connection Status
+```javascript
+// Run this first to check your connection status
+console.log('=== Connection Status Check ===');
+console.log('Starknet available:', !!window.starknet);
+console.log('Account exposed:', !!window.starknetAccount);
+console.log('Services exposed:', !!window.createSessionKey);
+
+if (window.starknetAccount) {
+  console.log('✅ Wallet connected:', window.starknetAccount.address);
+  
+  // Quick STRK balance check
+  const STRK_CONTRACT = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+  window.starknetProvider.callContract({
+    contractAddress: STRK_CONTRACT,
+    entrypoint: 'balanceOf',
+    calldata: [window.starknetAccount.address]
+  }).then(result => {
+    const balance = BigInt(result.result[0]) / BigInt(10**18);
+    console.log('💰 STRK balance:', balance.toString(), 'STRK');
+  }).catch(error => console.log('Balance check failed:', error.message));
+  
+} else if (window.starknet) {
+  console.log('⚠️ Starknet available but account not exposed. Try refreshing the page.');
+} else {
+  console.log('❌ No Starknet wallet detected.');
+}
+```
 
 #### Step 2: Test Session Key Service
 
@@ -165,7 +197,22 @@ console.log('Connected account:', account?.address);
 if (account && window.starknetProvider) {
   const provider = window.starknetProvider;
   
-  // Get ETH balance (ETH contract address on Starknet)
+  // Get STRK balance (STRK contract address on Starknet)
+  const STRK_CONTRACT = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+  
+  provider.callContract({
+    contractAddress: STRK_CONTRACT,
+    entrypoint: 'balanceOf',
+    calldata: [account.address]
+  })
+    .then(result => {
+      // Convert from wei to STRK (divide by 10^18)
+      const balance = BigInt(result.result[0]) / BigInt(10**18);
+      console.log('Account STRK balance:', balance.toString(), 'STRK');
+    })
+    .catch(error => console.error('STRK balance error:', error));
+
+  // Also get ETH balance for comparison
   const ETH_CONTRACT = '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
   
   provider.callContract({
@@ -178,7 +225,7 @@ if (account && window.starknetProvider) {
       const balance = BigInt(result.result[0]) / BigInt(10**18);
       console.log('Account ETH balance:', balance.toString(), 'ETH');
     })
-    .catch(error => console.error('Balance error:', error));
+    .catch(error => console.error('ETH balance error:', error));
 }
 
 // Alternative: Check account properties
@@ -209,7 +256,29 @@ if (account) {
     });
 }
 
-// Alternative: Simple ETH transfer test
+// STRK transfer test (recommended for testing accounts)
+const strkTransfer = {
+  contractAddress: '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d', // STRK contract
+  entrypoint: 'transfer',
+  calldata: [
+    '0x1234567890123456789012345678901234567890123456789012345678901234', // recipient address
+    '1000000000000000000', // amount (1 STRK in wei)
+    '0' // high part of uint256
+  ]
+};
+
+// Execute STRK transfer
+if (account) {
+  account.execute([strkTransfer])
+    .then(result => {
+      console.log('STRK transfer submitted:', result.transaction_hash);
+    })
+    .catch(error => {
+      console.error('STRK transfer error:', error);
+    });
+}
+
+// Alternative: ETH transfer (if you have ETH)
 const ethTransfer = {
   contractAddress: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7', // ETH contract
   entrypoint: 'transfer',

@@ -16,7 +16,7 @@ This guide provides instructions for deploying the AccountLend smart contracts t
 
 3. **Set up wallet and account**
    - Create a Starknet account on testnet
-   - Fund it with testnet ETH from [Starknet Faucet](https://faucet.goerli.starknet.io/)
+   - Fund it with testnet ETH from [Starknet Faucet](https://faucet.starknet.io/)
 
 ## Contract Overview
 

@@ -11,6 +11,7 @@ import NotificationCenter from '@/components/NotificationCenter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { NetworkSwitcher } from '@/components/NetworkSwitcher';
 
 function Home() {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'create' | 'manage' | 'history'>('marketplace');
@@ -63,7 +64,8 @@ function Home() {
             </nav>
 
             <StarknetProvider>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
+                <NetworkSwitcher />
                 <NotificationCenter />
                 <WalletBar />
               </div>

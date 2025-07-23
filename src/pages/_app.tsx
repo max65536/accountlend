@@ -1,6 +1,7 @@
 import type { AppProps } from 'next/app'
 import '../styles/globals.css'
 import { StarknetProvider } from '@/components/starknet-provider'
+import { NetworkProvider } from '@/contexts/NetworkContext'
 import { useEffect } from 'react'
 import { sessionKeyService } from '@/services/sessionKeyService'
 import { transactionService } from '@/services/transactionService'
@@ -115,8 +116,10 @@ export default function App({ Component, pageProps }: AppProps) {
   }, []);
 
   return (
-    <StarknetProvider>
-      <Component {...pageProps} />
-    </StarknetProvider>
+    <NetworkProvider>
+      <StarknetProvider>
+        <Component {...pageProps} />
+      </StarknetProvider>
+    </NetworkProvider>
   )
 }
