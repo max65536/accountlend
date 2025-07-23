@@ -58,10 +58,39 @@ function Home() {
               </div>
               
               <nav className="hidden md:flex items-center space-x-6">
-                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Marketplace</a>
-                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">How it Works</a>
-                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Security</a>
-                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Help</a>
+                <button 
+                  onClick={() => {
+                    setActiveTab('marketplace');
+                    document.querySelector('section:nth-of-type(3)')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Marketplace
+                </button>
+                <button 
+                  onClick={() => {
+                    document.querySelector('#how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  How it Works
+                </button>
+                <button 
+                  onClick={() => {
+                    document.querySelector('#security')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Security
+                </button>
+                <button 
+                  onClick={() => {
+                    document.querySelector('#help')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Help
+                </button>
               </nav>
 
               <div className="flex items-center gap-4">
@@ -232,6 +261,218 @@ function Home() {
             {activeTab === 'history' && (
               <TransactionHistory />
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* How it Works Section */}
+      <section id="how-it-works" className="py-16 px-4 bg-white/50">
+        <div className="container mx-auto">
+          <h3 className="text-3xl font-bold text-center mb-12">How AccountLend Works</h3>
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="text-center">
+              <CardHeader>
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Plus className="w-6 h-6 text-white" />
+                </div>
+                <CardTitle>1. Create Session Key</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Set up a session key with custom permissions, duration, and pricing. Define what actions renters can perform with your account.
+                </CardDescription>
+              </CardContent>
+            </Card>
+            
+            <Card className="text-center">
+              <CardHeader>
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <CardTitle>2. List on Marketplace</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Your session key appears in the marketplace where other users can browse, compare features, and rent access to your account.
+                </CardDescription>
+              </CardContent>
+            </Card>
+            
+            <Card className="text-center">
+              <CardHeader>
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <ArrowRight className="w-6 h-6 text-white" />
+                </div>
+                <CardTitle>3. Earn & Manage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-base">
+                  Earn STRK/ETH when users rent your session keys. Monitor usage, revoke access anytime, and manage all your active sessions.
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="mt-12 text-center">
+            <h4 className="text-xl font-semibold mb-4">For Renters</h4>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Browse the marketplace to find session keys that match your needs. Pay with STRK or ETH to gain temporary access to accounts with specific permissions for gaming, DeFi, NFTs, and more.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Security Section */}
+      <section id="security" className="py-16 px-4">
+        <div className="container mx-auto">
+          <h3 className="text-3xl font-bold text-center mb-12">Security & Trust</h3>
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Session Key Technology
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h5 className="font-semibold mb-2">Time-Limited Access</h5>
+                  <p className="text-gray-600">Session keys automatically expire after the set duration. No manual revocation needed.</p>
+                </div>
+                <div>
+                  <h5 className="font-semibold mb-2">Permission-Based Control</h5>
+                  <p className="text-gray-600">Define exactly what actions renters can perform - transfers, swaps, gaming, NFTs, or custom combinations.</p>
+                </div>
+                <div>
+                  <h5 className="font-semibold mb-2">Cryptographic Security</h5>
+                  <p className="text-gray-600">Built on Starknet's Account Abstraction with Argent's proven session key implementation.</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  Risk Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h5 className="font-semibold mb-2">Emergency Revocation</h5>
+                  <p className="text-gray-600">Instantly revoke any active session key if you detect suspicious activity or change your mind.</p>
+                </div>
+                <div>
+                  <h5 className="font-semibold mb-2">Spending Limits</h5>
+                  <p className="text-gray-600">Set maximum spending limits per session to protect your assets from excessive usage.</p>
+                </div>
+                <div>
+                  <h5 className="font-semibold mb-2">Activity Monitoring</h5>
+                  <p className="text-gray-600">Track all transactions made with your session keys in real-time through the dashboard.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="mt-12 bg-blue-50 p-6 rounded-lg">
+            <h4 className="text-xl font-semibold mb-4 text-center">Security Best Practices</h4>
+            <div className="grid md:grid-cols-2 gap-6">
+              <ul className="space-y-2">
+                <li className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
+                  <span className="text-sm">Only grant necessary permissions for the intended use case</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
+                  <span className="text-sm">Set reasonable time limits - shorter is generally safer</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
+                  <span className="text-sm">Monitor your session keys regularly through the dashboard</span>
+                </li>
+              </ul>
+              <ul className="space-y-2">
+                <li className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
+                  <span className="text-sm">Keep your main account secure with strong authentication</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
+                  <span className="text-sm">Revoke sessions immediately if you suspect misuse</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-blue-600 mt-1 flex-shrink-0" />
+                  <span className="text-sm">Start with small amounts to test new renters</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Help Section */}
+      <section id="help" className="py-16 px-4 bg-white/50">
+        <div className="container mx-auto">
+          <h3 className="text-3xl font-bold text-center mb-12">Help & Support</h3>
+          <div className="grid md:grid-cols-2 gap-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Getting Started</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h5 className="font-semibold mb-2">Connect Your Wallet</h5>
+                  <p className="text-gray-600">Install Argent X or Braavos wallet and connect to Starknet Sepolia testnet for testing.</p>
+                </div>
+                <div>
+                  <h5 className="font-semibold mb-2">Get Test Tokens</h5>
+                  <p className="text-gray-600">Visit the <a href="https://faucet.starknet.io/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Starknet Faucet</a> to get STRK tokens for testing.</p>
+                </div>
+                <div>
+                  <h5 className="font-semibold mb-2">Create Your First Session</h5>
+                  <p className="text-gray-600">Use the "Create Session" tab to set up your first session key with basic permissions.</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Troubleshooting</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h5 className="font-semibold mb-2">Wallet Connection Issues</h5>
+                  <p className="text-gray-600">Make sure you're on Starknet Sepolia testnet and refresh the page if connection fails.</p>
+                </div>
+                <div>
+                  <h5 className="font-semibold mb-2">Transaction Failures</h5>
+                  <p className="text-gray-600">Ensure you have sufficient STRK tokens for transaction fees. Check your balance in the wallet.</p>
+                </div>
+                <div>
+                  <h5 className="font-semibold mb-2">Session Key Not Working</h5>
+                  <p className="text-gray-600">Verify the session hasn't expired and has the correct permissions for your intended actions.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="mt-12 text-center">
+            <h4 className="text-xl font-semibold mb-4">Need More Help?</h4>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button variant="outline" size="lg">
+                📖 View Documentation
+              </Button>
+              <Button variant="outline" size="lg">
+                💬 Join Discord
+              </Button>
+              <Button variant="outline" size="lg">
+                🐛 Report Bug
+              </Button>
+            </div>
+            <p className="text-gray-600 mt-4">
+              For technical support, check our comprehensive testing guides: 
+              <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded ml-1">WALLET_TESTING_GUIDE.md</span>
+            </p>
           </div>
         </div>
       </section>
