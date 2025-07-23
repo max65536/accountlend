@@ -10,6 +10,7 @@ interface SessionKeyData {
   duration: number;
   permissions: string[];
   price: string;
+  currency: 'STRK' | 'ETH';
   description: string;
 }
 
@@ -36,7 +37,8 @@ export default function SessionKeyCreator() {
   const [sessionData, setSessionData] = useState<SessionKeyData>({
     duration: 24,
     permissions: ['transfer'],
-    price: '0.001',
+    price: '0.1',
+    currency: 'STRK',
     description: ''
   });
   const [loading, setLoading] = useState(false);
@@ -117,7 +119,8 @@ export default function SessionKeyCreator() {
           setSessionData({
             duration: 24,
             permissions: ['transfer'],
-            price: '0.001',
+            price: '0.1',
+            currency: 'STRK',
             description: ''
           });
         }, 3000);
@@ -149,7 +152,8 @@ export default function SessionKeyCreator() {
           setSessionData({
             duration: 24,
             permissions: ['transfer'],
-            price: '0.001',
+            price: '0.1',
+            currency: 'STRK',
             description: ''
           });
         }, 3000);
@@ -186,7 +190,7 @@ export default function SessionKeyCreator() {
         </p>
         <div className="space-y-2 mb-6">
           <Badge variant="secondary">
-            Duration: {sessionData.duration}h | Price: {sessionData.price} ETH
+            Duration: {sessionData.duration}h | Price: {sessionData.price} {sessionData.currency}
           </Badge>
           <div className="text-sm text-gray-600">
             Permissions: {sessionData.permissions.join(', ')}
@@ -231,19 +235,59 @@ export default function SessionKeyCreator() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium mb-2">Price (ETH)</label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="number"
-                step="0.0001"
-                min="0"
-                value={sessionData.price}
-                onChange={(e) => setSessionData(prev => ({ ...prev, price: e.target.value }))}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="0.001"
-              />
+            <label className="block text-sm font-medium mb-2">Price</label>
+            <div className="flex gap-3">
+              <div className="flex-1 relative">
+                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  step={sessionData.currency === 'STRK' ? '0.01' : '0.0001'}
+                  min="0"
+                  value={sessionData.price}
+                  onChange={(e) => setSessionData(prev => ({ ...prev, price: e.target.value }))}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder={sessionData.currency === 'STRK' ? '0.1' : '0.001'}
+                />
+              </div>
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => setSessionData(prev => ({ 
+                    ...prev, 
+                    currency: 'STRK',
+                    price: prev.currency === 'ETH' ? (parseFloat(prev.price || '0') * 100).toString() : prev.price
+                  }))}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                    sessionData.currency === 'STRK'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  STRK
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSessionData(prev => ({ 
+                    ...prev, 
+                    currency: 'ETH',
+                    price: prev.currency === 'STRK' ? (parseFloat(prev.price || '0') / 100).toString() : prev.price
+                  }))}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
+                    sessionData.currency === 'ETH'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  ETH
+                </button>
+              </div>
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {sessionData.currency === 'STRK' 
+                ? 'STRK is recommended for STRK-only test accounts' 
+                : 'ETH requires having ETH tokens for payment'
+              }
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -345,7 +389,7 @@ export default function SessionKeyCreator() {
               <h4 className="font-medium mb-2">Summary</h4>
               <div className="text-sm text-gray-600 space-y-1">
                 <div>Duration: {sessionData.duration} hours</div>
-                <div>Price: {sessionData.price} ETH</div>
+                <div>Price: {sessionData.price} {sessionData.currency}</div>
                 <div>Permissions: {sessionData.permissions.length} selected</div>
                 <div>Owner: {address?.slice(0, 6)}...{address?.slice(-4)}</div>
               </div>

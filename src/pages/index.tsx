@@ -35,44 +35,43 @@ function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <Head>
-        <title>AccountLend - Session Key Marketplace</title>
-        <meta name="description" content="Rent and lend temporary account access through secure session keys on Starknet" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+    <StarknetProvider>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <Head>
+          <title>AccountLend - Session Key Marketplace</title>
+          <meta name="description" content="Rent and lend temporary account access through secure session keys on Starknet" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <link rel="icon" href="/favicon.ico" />
+        </Head>
 
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-white" />
+        {/* Header */}
+        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Wallet className="w-5 h-5 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  AccountLend
+                </h1>
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                AccountLend
-              </h1>
-            </div>
-            
-            <nav className="hidden md:flex items-center space-x-6">
-              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Marketplace</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">How it Works</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Security</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Help</a>
-            </nav>
+              
+              <nav className="hidden md:flex items-center space-x-6">
+                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Marketplace</a>
+                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">How it Works</a>
+                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Security</a>
+                <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">Help</a>
+              </nav>
 
-            <StarknetProvider>
               <div className="flex items-center gap-4">
                 <NetworkSwitcher />
                 <NotificationCenter />
                 <WalletBar />
               </div>
-            </StarknetProvider>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
       {/* Hero Section */}
       <section className="py-20 px-4">
@@ -88,11 +87,27 @@ function Home() {
             Set custom permissions, time limits, and earn from your unused account access.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+            <Button 
+              size="lg" 
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              onClick={() => {
+                setActiveTab('marketplace');
+                // Scroll to the main content section
+                document.querySelector('section:nth-of-type(3)')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
               Explore Marketplace
               <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
-            <Button size="lg" variant="outline">
+            <Button 
+              size="lg" 
+              variant="outline"
+              onClick={() => {
+                setActiveTab('create');
+                // Scroll to the main content section
+                document.querySelector('section:nth-of-type(3)')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
               Create Session Key
               <Plus className="ml-2 w-4 h-4" />
             </Button>
@@ -175,9 +190,7 @@ function Home() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <StarknetProvider>
-                    <AccountMarket />
-                  </StarknetProvider>
+                  <AccountMarket />
                 </CardContent>
               </Card>
             )}
@@ -194,9 +207,7 @@ function Home() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <StarknetProvider>
-                    <SessionKeyCreator />
-                  </StarknetProvider>
+                  <SessionKeyCreator />
                 </CardContent>
               </Card>
             )}
@@ -213,17 +224,13 @@ function Home() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <StarknetProvider>
-                    <SessionKeyManager />
-                  </StarknetProvider>
+                  <SessionKeyManager />
                 </CardContent>
               </Card>
             )}
 
             {activeTab === 'history' && (
-              <StarknetProvider>
-                <TransactionHistory />
-              </StarknetProvider>
+              <TransactionHistory />
             )}
           </div>
         </div>
@@ -277,7 +284,8 @@ function Home() {
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </StarknetProvider>
   );
 }
 

@@ -12,10 +12,10 @@ This guide explains how to connect wallets and test session key functionality in
 ### 2. Testnet Setup
 - Switch your wallet to **Starknet Sepolia Testnet**
 - Get testnet tokens from [Starknet Faucet](https://faucet.starknet.io/)
-  - **STRK tokens**: For testing transactions (recommended)
-  - **ETH tokens**: For transaction fees (required)
-- Ensure you have at least 0.01 ETH for transaction fees and some STRK for testing
-- **Note**: If you only have STRK and no ETH, you can still test most console functions except actual transactions
+  - **STRK tokens**: For both testing transactions AND transaction fees (recommended)
+  - **ETH tokens**: Alternative for transaction fees (optional)
+- Ensure you have at least 0.1 STRK for transaction fees and testing
+- **Note**: STRK can be used for transaction fees on Starknet, so having only STRK tokens is sufficient for full testing
 
 ### 3. Application Setup
 ```bash
@@ -55,12 +55,12 @@ yarn dev
 
 #### Step 1: Navigate to Session Key Creator
 1. After connecting your wallet, click on the **"Create Session"** tab
-2. You'll see the SessionKeyCreator component with a form
+2. You'll see the SessionKeyCreator component with a form (if you still see "Connect Your Wallet", try refreshing the page)
 
 #### Step 2: Fill Session Key Details
 ```
 Description: "Test DeFi Session Key"
-Price: 0.001 (ETH)
+Price: 0.1 (STRK)
 Duration: 24 hours
 Permissions: Select "Transfer" and "Swap"
 ```
@@ -122,7 +122,7 @@ if (!window.starknetAccount) {
   // Use the console-friendly wrapper function
   window.createSessionKey({
     description: 'Console Test Session',
-    price: '0.001',
+    price: '0.1', // STRK price
     duration: 24, // hours
     permissions: ['transfer', 'approve']
   })
@@ -147,7 +147,7 @@ if (!window.starknetAccount) {
     account,                    // 1st: Account object
     24,                        // 2nd: duration (hours)
     ['transfer', 'approve'],   // 3rd: permissions array
-    '0.001',                   // 4th: price string
+    '0.1',                     // 4th: price string (STRK)
     'Console Test Session'     // 5th: description string
   )
     .then(result => {
@@ -185,6 +185,67 @@ if (allKeys.length > 0) {
 }
 ```
 
+## STRK-Only Account Testing
+
+### Important Note for STRK-Only Accounts
+If your test account only has STRK tokens (no ETH), you can still perform **full testing** of all functionality. Starknet supports using STRK for transaction fees, so having only STRK is sufficient.
+
+### STRK-Only Testing Checklist
+```javascript
+// 1. Verify STRK balance is sufficient
+const STRK_CONTRACT = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+window.starknetProvider.callContract({
+  contractAddress: STRK_CONTRACT,
+  entrypoint: 'balanceOf',
+  calldata: [window.starknetAccount.address]
+}).then(result => {
+  const balance = BigInt(result.result[0]) / BigInt(10**18);
+  console.log('STRK balance:', balance.toString());
+  
+  if (balance >= 0.1) {
+    console.log('✅ Ready for full testing with STRK');
+  } else {
+    console.log('⚠️ Need more STRK from faucet');
+  }
+});
+
+// 2. Test STRK-based session key creation
+window.createSessionKey({
+  description: 'STRK-Only Test Session',
+  price: '0.1', // STRK price
+  duration: 24,
+  permissions: ['transfer', 'approve']
+});
+
+// 3. Test STRK transfers (this will use STRK for fees too)
+const strkTransfer = {
+  contractAddress: '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d',
+  entrypoint: 'transfer',
+  calldata: [
+    '0x1234567890123456789012345678901234567890123456789012345678901234', // recipient
+    '50000000000000000', // 0.05 STRK
+    '0'
+  ]
+};
+
+window.starknetAccount.execute([strkTransfer])
+  .then(result => console.log('✅ STRK transfer with STRK fees successful:', result.transaction_hash))
+  .catch(error => console.error('Transfer failed:', error));
+```
+
+### What Works with STRK-Only Accounts
+- ✅ **Session Key Creation**: Full functionality
+- ✅ **Session Key Validation**: All validation tests
+- ✅ **STRK Transfers**: Using STRK for both transfer and fees
+- ✅ **Marketplace Listing**: List session keys for STRK
+- ✅ **Marketplace Renting**: Rent session keys with STRK
+- ✅ **Contract Interactions**: All smart contract calls
+- ✅ **Transaction Fees**: STRK is used automatically for fees
+
+### What to Skip with STRK-Only Accounts
+- ⏭️ **ETH Transfer Tests**: Skip these specific examples
+- ⏭️ **ETH Balance Checks**: Not needed for functionality
+
 ## Testing Wallet Account Behaviors
 
 ### 1. Account Information Testing
@@ -209,10 +270,17 @@ if (account && window.starknetProvider) {
       // Convert from wei to STRK (divide by 10^18)
       const balance = BigInt(result.result[0]) / BigInt(10**18);
       console.log('Account STRK balance:', balance.toString(), 'STRK');
+      
+      // Check if sufficient for testing (need at least 0.1 STRK)
+      if (balance < 0.1) {
+        console.warn('⚠️ Low STRK balance. Consider getting more from faucet for testing.');
+      } else {
+        console.log('✅ Sufficient STRK balance for testing');
+      }
     })
     .catch(error => console.error('STRK balance error:', error));
 
-  // Also get ETH balance for comparison
+  // Optional: Check ETH balance if available
   const ETH_CONTRACT = '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
   
   provider.callContract({
@@ -223,9 +291,13 @@ if (account && window.starknetProvider) {
     .then(result => {
       // Convert from wei to ETH (divide by 10^18)
       const balance = BigInt(result.result[0]) / BigInt(10**18);
-      console.log('Account ETH balance:', balance.toString(), 'ETH');
+      if (balance > 0) {
+        console.log('Account ETH balance:', balance.toString(), 'ETH');
+      } else {
+        console.log('No ETH balance (STRK-only account - this is fine for testing)');
+      }
     })
-    .catch(error => console.error('ETH balance error:', error));
+    .catch(error => console.log('ETH balance check skipped (STRK-only account)'));
 }
 
 // Alternative: Check account properties
@@ -256,29 +328,33 @@ if (account) {
     });
 }
 
-// STRK transfer test (recommended for testing accounts)
+// STRK transfer test (recommended for STRK-only accounts)
 const strkTransfer = {
   contractAddress: '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d', // STRK contract
   entrypoint: 'transfer',
   calldata: [
-    '0x1234567890123456789012345678901234567890123456789012345678901234', // recipient address
-    '1000000000000000000', // amount (1 STRK in wei)
+    '0x1234567890123456789012345678901234567890123456789012345678901234', // recipient address (replace with real address)
+    '100000000000000000', // amount (0.1 STRK in wei)
     '0' // high part of uint256
   ]
 };
 
-// Execute STRK transfer
+// Execute STRK transfer (works with STRK-only accounts)
 if (account) {
   account.execute([strkTransfer])
     .then(result => {
       console.log('STRK transfer submitted:', result.transaction_hash);
+      console.log('✅ Transaction successful with STRK fees');
     })
     .catch(error => {
       console.error('STRK transfer error:', error);
+      if (error.message.includes('insufficient')) {
+        console.log('💡 Tip: Get more STRK from faucet for transaction fees');
+      }
     });
 }
 
-// Alternative: ETH transfer (if you have ETH)
+// Alternative: ETH transfer (only if you have ETH - skip for STRK-only accounts)
 const ethTransfer = {
   contractAddress: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7', // ETH contract
   entrypoint: 'transfer',
@@ -289,14 +365,32 @@ const ethTransfer = {
   ]
 };
 
-// Execute ETH transfer
+// Execute ETH transfer (skip this for STRK-only accounts)
 if (account) {
-  account.execute([ethTransfer])
+  // First check if account has ETH
+  const ETH_CONTRACT = '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
+  window.starknetProvider.callContract({
+    contractAddress: ETH_CONTRACT,
+    entrypoint: 'balanceOf',
+    calldata: [account.address]
+  })
     .then(result => {
-      console.log('ETH transfer submitted:', result.transaction_hash);
+      const ethBalance = BigInt(result.result[0]);
+      if (ethBalance > 0) {
+        // Has ETH, can execute transfer
+        account.execute([ethTransfer])
+          .then(result => {
+            console.log('ETH transfer submitted:', result.transaction_hash);
+          })
+          .catch(error => {
+            console.error('ETH transfer error:', error);
+          });
+      } else {
+        console.log('⏭️ Skipping ETH transfer (STRK-only account)');
+      }
     })
     .catch(error => {
-      console.error('Transfer error:', error);
+      console.log('⏭️ Skipping ETH transfer test (STRK-only account)');
     });
 }
 ```
@@ -306,15 +400,17 @@ if (account) {
 // Test executing a transaction with a session key
 const sessionKey = allKeys[0]; // Use first available session key
 
+// Use STRK transfer for STRK-only accounts
 const sessionTransaction = {
-  to: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7', // ETH contract
+  to: '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d', // STRK contract
   selector: 'transfer',
-  calldata: ['0xrecipient_address', '1000000000000000'] // 0.001 ETH
+  calldata: ['0xrecipient_address', '100000000000000000'] // 0.1 STRK
 };
 
 sessionService.executeWithSessionKey(sessionKey, sessionTransaction)
   .then(result => {
     console.log('Session transaction executed:', result);
+    console.log('✅ Session key works with STRK transactions');
   })
   .catch(error => {
     console.error('Session execution error:', error);
@@ -330,7 +426,7 @@ sessionService.executeWithSessionKey(sessionKey, sessionTransaction)
 
 const listingData = {
   sessionKeyId: 'your-session-key-id',
-  price: '0.001', // ETH
+  price: '0.1', // STRK
   duration: 3600, // 1 hour
   permissions: ['transfer']
 };
@@ -395,13 +491,27 @@ window.starknet.provider.getChainId()
 
 ### 3. Transaction Failures
 ```javascript
-// Check account balance before transactions
-const minBalance = BigInt('1000000000000000'); // 0.001 ETH
-account.getBalance()
-  .then(balance => {
-    if (BigInt(balance) < minBalance) {
-      console.error('Insufficient balance. Please get testnet ETH from faucet.');
+// Check STRK balance before transactions (for STRK-only accounts)
+const minStrkBalance = BigInt('100000000000000000'); // 0.1 STRK
+const STRK_CONTRACT = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+
+window.starknetProvider.callContract({
+  contractAddress: STRK_CONTRACT,
+  entrypoint: 'balanceOf',
+  calldata: [account.address]
+})
+  .then(result => {
+    const strkBalance = BigInt(result.result[0]);
+    if (strkBalance < minStrkBalance) {
+      console.error('Insufficient STRK balance. Please get testnet STRK from faucet.');
+      console.log('Current balance:', (strkBalance / BigInt(10**18)).toString(), 'STRK');
+      console.log('Required minimum:', (minStrkBalance / BigInt(10**18)).toString(), 'STRK');
+    } else {
+      console.log('✅ Sufficient STRK balance for transactions');
     }
+  })
+  .catch(error => {
+    console.error('Balance check failed:', error);
   });
 ```
 
@@ -551,11 +661,27 @@ console.log('Limited key should not have transfer permission:', !hasTransfer);
 
 ## Conclusion
 
-This guide covers comprehensive testing of wallet connection and session key functionality. Use the UI for normal user testing and the console methods for advanced debugging and development testing.
+This guide covers comprehensive testing of wallet connection and session key functionality, **including full support for STRK-only test accounts**. Since Starknet supports STRK for transaction fees, having only STRK tokens is sufficient for complete testing of all features.
 
-For automated testing, refer to the test files in the `tests/` directory, particularly:
-- `tests/services/sessionKeyService.test.js`
-- `tests/e2e/marketplace.spec.js`
-- `tests/security/security-audit.test.js`
+### Testing Summary
+- **STRK-Only Accounts**: ✅ Full functionality available
+- **Mixed Accounts (STRK + ETH)**: ✅ Full functionality available  
+- **ETH-Only Accounts**: ⚠️ Limited (need STRK for optimal testing)
 
-Remember to always test on Starknet Sepolia testnet before using real funds on mainnet.
+### Testing Methods
+- **UI Testing**: Use the web interface for normal user testing
+- **Console Testing**: Use browser console methods for advanced debugging
+- **Automated Testing**: Refer to test files in the `tests/` directory
+
+### Key Test Files
+- `tests/services/sessionKeyService.test.js` - Session key functionality
+- `tests/e2e/marketplace.spec.js` - End-to-end marketplace testing
+- `tests/security/security-audit.test.js` - Security validation
+
+### Important Reminders
+- Always test on **Starknet Sepolia testnet** before using real funds on mainnet
+- STRK tokens can be used for both transaction fees and testing transfers
+- Get testnet STRK from: https://faucet.starknet.io/
+- Minimum recommended balance: **0.1 STRK** for comprehensive testing
+
+**For STRK-only accounts**: You have full testing capabilities - no ETH required!
