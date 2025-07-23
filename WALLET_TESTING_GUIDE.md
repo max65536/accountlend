@@ -80,46 +80,76 @@ Permissions: Select "Transfer" and "Swap"
 2. Go to the **Console** tab
 
 #### Step 2: Test Session Key Service
+
+**Method 1: Using Console-Friendly Wrapper (Recommended)**
 ```javascript
-// Access the session key service
-const sessionService = window.sessionKeyService;
-
-// Create a test session key
-const sessionData = {
-  permissions: ['transfer', 'approve'],
-  expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-  metadata: {
-    name: 'Console Test Session',
-    description: 'Created via browser console',
-    category: 'Testing'
-  }
-};
-
-// Create the session key
-sessionService.createSessionKey(sessionData)
-  .then(result => {
-    console.log('Session key created:', result);
+// Make sure wallet is connected first
+if (!window.starknetAccount) {
+  console.error('Please connect your wallet first!');
+} else {
+  // Use the console-friendly wrapper function
+  window.createSessionKey({
+    description: 'Console Test Session',
+    price: '0.001',
+    duration: 24, // hours
+    permissions: ['transfer', 'approve']
   })
-  .catch(error => {
-    console.error('Error creating session key:', error);
-  });
+    .then(result => {
+      console.log('Session key created:', result);
+    })
+    .catch(error => {
+      console.error('Error creating session key:', error);
+    });
+}
+```
+
+**Method 2: Using Raw Service (Advanced)**
+```javascript
+// Make sure wallet is connected first
+if (!window.starknetAccount) {
+  console.error('Please connect your wallet first!');
+} else {
+  const account = window.starknetAccount;
+  // Raw service requires 5 individual parameters in exact order
+  window.sessionKeyService.createSessionKey(
+    account,                    // 1st: Account object
+    24,                        // 2nd: duration (hours)
+    ['transfer', 'approve'],   // 3rd: permissions array
+    '0.001',                   // 4th: price string
+    'Console Test Session'     // 5th: description string
+  )
+    .then(result => {
+      console.log('Session key created:', result);
+    })
+    .catch(error => {
+      console.error('Error creating session key:', error);
+    });
+}
 ```
 
 #### Step 3: Test Session Key Validation
 ```javascript
-// Get all stored session keys
-const allKeys = sessionService.getAllStoredSessionKeys();
+// Get all stored session keys using wrapper function
+const allKeys = window.getAllStoredSessionKeys();
 console.log('All session keys:', allKeys);
 
 // Validate a specific session key
 if (allKeys.length > 0) {
   const firstKey = allKeys[0];
-  const isValid = sessionService.validateSessionKey(firstKey);
-  console.log('Session key valid:', isValid);
+  
+  // Use wrapper functions for validation
+  window.validateSessionKey(firstKey)
+    .then(isValid => {
+      console.log('Session key valid:', isValid);
+    });
   
   // Check permissions
-  const hasTransfer = sessionService.hasPermission(firstKey, 'transfer');
+  const hasTransfer = window.hasPermission(firstKey, 'transfer');
   console.log('Has transfer permission:', hasTransfer);
+  
+  // Get session statistics
+  const stats = window.getSessionKeyStats();
+  console.log('Session key statistics:', stats);
 }
 ```
 
@@ -131,36 +161,75 @@ if (allKeys.length > 0) {
 const account = window.starknetAccount;
 console.log('Connected account:', account?.address);
 
-// Get account balance
-if (account) {
-  account.getBalance()
-    .then(balance => console.log('Account balance:', balance))
+// Get account balance using provider
+if (account && window.starknetProvider) {
+  const provider = window.starknetProvider;
+  
+  // Get ETH balance (ETH contract address on Starknet)
+  const ETH_CONTRACT = '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
+  
+  provider.callContract({
+    contractAddress: ETH_CONTRACT,
+    entrypoint: 'balanceOf',
+    calldata: [account.address]
+  })
+    .then(result => {
+      // Convert from wei to ETH (divide by 10^18)
+      const balance = BigInt(result.result[0]) / BigInt(10**18);
+      console.log('Account ETH balance:', balance.toString(), 'ETH');
+    })
     .catch(error => console.error('Balance error:', error));
+}
+
+// Alternative: Check account properties
+if (account) {
+  console.log('Account object:', account);
+  console.log('Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(account)));
 }
 ```
 
 ### 2. Transaction Testing
 ```javascript
-// Test transaction submission
+// Test transaction submission using correct Starknet React format
 const testTransaction = {
-  to: '0x038aad77e374b20f0ff285a3912b5d9ff75f1137c5cb624975a65ee9093a78f4', // SessionKeyManager contract
-  selector: 'create_session_key',
+  contractAddress: '0x038aad77e374b20f0ff285a3912b5d9ff75f1137c5cb624975a65ee9093a78f4', // SessionKeyManager contract
+  entrypoint: 'create_session_key',
   calldata: ['0x123456789abcdef', '86400'] // publicKey, duration
 };
 
-// Submit transaction
-account.execute(testTransaction)
-  .then(result => {
-    console.log('Transaction submitted:', result.transaction_hash);
-    // Monitor transaction status
-    return window.transactionService.monitorTransaction(result.transaction_hash);
-  })
-  .then(finalStatus => {
-    console.log('Transaction final status:', finalStatus);
-  })
-  .catch(error => {
-    console.error('Transaction error:', error);
-  });
+// Submit transaction (account.execute expects an array of calls)
+if (account) {
+  account.execute([testTransaction])
+    .then(result => {
+      console.log('Transaction submitted:', result.transaction_hash);
+      console.log('Transaction result:', result);
+    })
+    .catch(error => {
+      console.error('Transaction error:', error);
+    });
+}
+
+// Alternative: Simple ETH transfer test
+const ethTransfer = {
+  contractAddress: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7', // ETH contract
+  entrypoint: 'transfer',
+  calldata: [
+    '0x1234567890123456789012345678901234567890123456789012345678901234', // recipient address
+    '1000000000000000', // amount (0.001 ETH in wei)
+    '0' // high part of uint256
+  ]
+};
+
+// Execute ETH transfer
+if (account) {
+  account.execute([ethTransfer])
+    .then(result => {
+      console.log('ETH transfer submitted:', result.transaction_hash);
+    })
+    .catch(error => {
+      console.error('Transfer error:', error);
+    });
+}
 ```
 
 ### 3. Session Key Execution Testing
