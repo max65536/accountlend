@@ -90,15 +90,15 @@ export default function SessionKeyManager() {
   // Load session keys when component mounts or account changes
   useEffect(() => {
     if (account && address) {
-      const keys = sessionKeyService.getStoredSessionKeys(address);
-      if (keys.length === 0) {
-        // Create mock keys for demo if none exist
-        sessionKeyService.createMockSessionKeys(address);
-        const mockKeys = sessionKeyService.getStoredSessionKeys(address);
-        setSessionKeys(mockKeys);
-      } else {
-        setSessionKeys(keys);
-      }
+      sessionKeyService.getStoredSessionKeys(address).then(keys => {
+        if (keys.length === 0) {
+          // Create mock keys for demo if none exist
+          const mockKeys = sessionKeyService.createMockSessionKeys(address);
+          setSessionKeys(mockKeys);
+        } else {
+          setSessionKeys(keys);
+        }
+      });
     }
   }, [account, address]);
 

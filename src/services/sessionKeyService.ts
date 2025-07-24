@@ -324,11 +324,70 @@ export class SessionKeyService {
   }
 
   /**
-   * Get all stored session keys for a user
+   * Get all stored session keys for a user from smart contract
    */
-  getStoredSessionKeys(userAddress: string): StoredSessionKey[] {
+  async getStoredSessionKeys(userAddress: string): Promise<StoredSessionKey[]> {
     try {
-      // Only access localStorage in browser environment
+      const networkConfig = getCurrentNetworkConfig();
+      const { Contract } = await import('starknet');
+      
+      // Import contract ABI
+      const sessionManagerAbi = await import('../contracts/SessionKeyManager.json');
+      const contract = new Contract(
+        sessionManagerAbi.default.abi,
+        networkConfig.sessionKeyManagerAddress,
+        this.provider
+      );
+
+      // Get session keys from contract
+      const sessionKeyIds = await contract.get_user_session_keys(userAddress);
+      const sessionKeys: StoredSessionKey[] = [];
+
+      // Fetch details for each session key
+      for (const keyId of sessionKeyIds) {
+        try {
+          const sessionData = await contract.get_session_key_details(keyId);
+          
+          // Convert contract data to StoredSessionKey format
+          const storedKey: StoredSessionKey = {
+            id: keyId.toString(),
+            description: sessionData.description || 'Session Key',
+            permissions: this.parsePermissionsFromPolicies(sessionData.policies || []),
+            duration: Number(sessionData.duration) || 24,
+            price: sessionData.price?.toString() || '0',
+            createdAt: Number(sessionData.created_at) * 1000, // Convert from seconds to milliseconds
+            expiresAt: Number(sessionData.expires_at) * 1000, // Convert from seconds to milliseconds
+            status: this.determineSessionStatus(sessionData),
+            owner: sessionData.owner || userAddress,
+            sessionData: {
+              key: sessionData.session_key,
+              policies: sessionData.policies || [],
+              signedSession: sessionData.signed_session
+            },
+            rentedBy: sessionData.rented_by,
+            earnings: sessionData.earnings ? Number(sessionData.earnings) : undefined
+          };
+
+          sessionKeys.push(storedKey);
+        } catch (keyError) {
+          console.warn('Failed to fetch session key details:', keyId, keyError);
+        }
+      }
+
+      return sessionKeys;
+    } catch (error) {
+      console.error('Failed to get stored session keys from contract:', error);
+      
+      // Fallback to localStorage for development/demo purposes
+      return this.getStoredSessionKeysFromLocalStorage(userAddress);
+    }
+  }
+
+  /**
+   * Fallback method to get session keys from localStorage (for development/demo)
+   */
+  private getStoredSessionKeysFromLocalStorage(userAddress: string): StoredSessionKey[] {
+    try {
       if (typeof window === 'undefined' || !window.localStorage) {
         return [];
       }
@@ -338,81 +397,168 @@ export class SessionKeyService {
       
       const sessionKeys: StoredSessionKey[] = JSON.parse(stored);
       
-      // Validate all stored session keys and remove invalid ones
-      const validKeys = sessionKeys.filter(key => {
-        if (key.sessionData?.key) {
-          const keyWithoutPrefix = key.sessionData.key.startsWith('0x') 
-            ? key.sessionData.key.slice(2) 
-            : key.sessionData.key;
-          const isValid = this.validateFeltValue(keyWithoutPrefix);
-          if (!isValid) {
-            console.warn('Removing invalid session key from storage:', key.id, key.sessionData.key);
-          }
-          return isValid;
-        }
-        return true;
-      });
-      
       // Update expired sessions
       const now = Date.now();
-      const updatedKeys = validKeys.map(key => ({
+      const updatedKeys = sessionKeys.map(key => ({
         ...key,
         status: now > key.expiresAt ? 'expired' as const : key.status
       }));
 
-      // Save updated keys if any changed or invalid keys were removed
-      const hasChanges = updatedKeys.length !== sessionKeys.length || 
-        updatedKeys.some((key, index) => key.status !== validKeys[index]?.status);
-      if (hasChanges) {
-        localStorage.setItem(`sessionKeys_${userAddress}`, JSON.stringify(updatedKeys));
-      }
-      
       return updatedKeys;
     } catch (error) {
-      console.error('Failed to get stored session keys:', error);
+      console.error('Failed to get stored session keys from localStorage:', error);
       return [];
     }
   }
 
   /**
-   * Store session key locally
+   * Parse permissions from contract policies
    */
-  private storeSessionKey(sessionKey: StoredSessionKey): void {
-    try {
-      // Only access localStorage in browser environment
-      if (typeof window === 'undefined' || !window.localStorage) {
-        return;
+  private parsePermissionsFromPolicies(policies: Policy[]): string[] {
+    const permissions = new Set<string>();
+    
+    policies.forEach(policy => {
+      // Map contract selectors back to permission names
+      if (policy.selector === 'transfer' || policy.selector === 'transferFrom') {
+        permissions.add('transfer');
+      } else if (policy.selector === 'approve' || policy.selector === 'increaseAllowance' || policy.selector === 'decreaseAllowance') {
+        permissions.add('approve');
+      } else if (policy.selector.includes('swap')) {
+        permissions.add('swap');
+      } else if (policy.selector.includes('stake')) {
+        permissions.add('stake');
+      } else if (policy.selector.includes('game') || policy.selector.includes('reward')) {
+        permissions.add('gaming');
+      } else if (policy.selector === 'safeTransferFrom' || policy.selector === 'setApprovalForAll') {
+        permissions.add('nft');
       }
+    });
 
-      const userAddress = sessionKey.owner;
-      const existing = this.getStoredSessionKeys(userAddress);
-      const updated = [...existing, sessionKey];
-      
-      localStorage.setItem(`sessionKeys_${userAddress}`, JSON.stringify(updated));
-    } catch (error) {
-      console.error('Failed to store session key:', error);
+    return Array.from(permissions);
+  }
+
+  /**
+   * Determine session status from contract data
+   */
+  private determineSessionStatus(sessionData: any): 'active' | 'expired' | 'revoked' | 'rented' {
+    const now = Date.now();
+    const expiresAt = Number(sessionData.expires_at) * 1000;
+    
+    if (sessionData.is_revoked) {
+      return 'revoked';
+    } else if (now > expiresAt) {
+      return 'expired';
+    } else if (sessionData.rented_by && sessionData.rented_by !== sessionData.owner) {
+      return 'rented';
+    } else {
+      return 'active';
     }
   }
 
   /**
-   * Update stored session key
+   * Store session key in smart contract
    */
-  private updateStoredSessionKey(sessionKey: StoredSessionKey): void {
+  private async storeSessionKey(sessionKey: StoredSessionKey): Promise<void> {
     try {
-      // Only access localStorage in browser environment
+      const networkConfig = getCurrentNetworkConfig();
+      const { Contract } = await import('starknet');
+      
+      // Import contract ABI
+      const sessionManagerAbi = await import('../contracts/SessionKeyManager.json');
+      const contract = new Contract(
+        sessionManagerAbi.default.abi,
+        networkConfig.sessionKeyManagerAddress,
+        this.provider
+      );
+
+      // Store session key in contract
+      const callData = {
+        session_id: sessionKey.id,
+        session_key: sessionKey.sessionData?.key || '',
+        description: sessionKey.description,
+        duration: sessionKey.duration,
+        price: sessionKey.price,
+        expires_at: Math.floor(sessionKey.expiresAt / 1000), // Convert to seconds
+        policies: sessionKey.sessionData?.policies || [],
+        signed_session: sessionKey.sessionData?.signedSession
+      };
+
+      await contract.store_session_key(callData);
+      
+      console.log('Session key stored in contract:', sessionKey.id);
+    } catch (error) {
+      console.error('Failed to store session key in contract:', error);
+      
+      // Fallback to localStorage for development/demo purposes
+      this.storeSessionKeyInLocalStorage(sessionKey);
+    }
+  }
+
+  /**
+   * Fallback method to store session key in localStorage (for development/demo)
+   */
+  private storeSessionKeyInLocalStorage(sessionKey: StoredSessionKey): void {
+    try {
       if (typeof window === 'undefined' || !window.localStorage) {
         return;
       }
 
       const userAddress = sessionKey.owner;
-      const existing = this.getStoredSessionKeys(userAddress);
+      const existing = this.getStoredSessionKeysFromLocalStorage(userAddress);
+      const updated = [...existing, sessionKey];
+      
+      localStorage.setItem(`sessionKeys_${userAddress}`, JSON.stringify(updated));
+    } catch (error) {
+      console.error('Failed to store session key in localStorage:', error);
+    }
+  }
+
+  /**
+   * Update stored session key in smart contract
+   */
+  private async updateStoredSessionKey(sessionKey: StoredSessionKey): Promise<void> {
+    try {
+      const networkConfig = getCurrentNetworkConfig();
+      const { Contract } = await import('starknet');
+      
+      // Import contract ABI
+      const sessionManagerAbi = await import('../contracts/SessionKeyManager.json');
+      const contract = new Contract(
+        sessionManagerAbi.default.abi,
+        networkConfig.sessionKeyManagerAddress,
+        this.provider
+      );
+
+      // Update session key status in contract
+      await contract.update_session_key_status(sessionKey.id, sessionKey.status);
+      
+      console.log('Session key updated in contract:', sessionKey.id);
+    } catch (error) {
+      console.error('Failed to update session key in contract:', error);
+      
+      // Fallback to localStorage for development/demo purposes
+      this.updateStoredSessionKeyInLocalStorage(sessionKey);
+    }
+  }
+
+  /**
+   * Fallback method to update session key in localStorage (for development/demo)
+   */
+  private updateStoredSessionKeyInLocalStorage(sessionKey: StoredSessionKey): void {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return;
+      }
+
+      const userAddress = sessionKey.owner;
+      const existing = this.getStoredSessionKeysFromLocalStorage(userAddress);
       const updated = existing.map(key => 
         key.id === sessionKey.id ? sessionKey : key
       );
       
       localStorage.setItem(`sessionKeys_${userAddress}`, JSON.stringify(updated));
     } catch (error) {
-      console.error('Failed to update stored session key:', error);
+      console.error('Failed to update stored session key in localStorage:', error);
     }
   }
 
@@ -471,28 +617,40 @@ export class SessionKeyService {
   }
 
   /**
-   * Get session key statistics
+   * Get session key statistics from smart contract
    */
-  getSessionKeyStats(userAddress: string): {
+  async getSessionKeyStats(userAddress: string): Promise<{
     total: number;
     active: number;
     expired: number;
     revoked: number;
     rented: number;
     totalEarnings: number;
-  } {
-    const sessionKeys = this.getStoredSessionKeys(userAddress);
-    
-    return {
-      total: sessionKeys.length,
-      active: sessionKeys.filter(k => k.status === 'active').length,
-      expired: sessionKeys.filter(k => k.status === 'expired').length,
-      revoked: sessionKeys.filter(k => k.status === 'revoked').length,
-      rented: sessionKeys.filter(k => k.status === 'rented').length,
-      totalEarnings: sessionKeys.reduce((sum, k) => {
-        return k.earnings ? sum + k.earnings : sum;
-      }, 0)
-    };
+  }> {
+    try {
+      const sessionKeys = await this.getStoredSessionKeys(userAddress);
+      
+      return {
+        total: sessionKeys.length,
+        active: sessionKeys.filter(k => k.status === 'active').length,
+        expired: sessionKeys.filter(k => k.status === 'expired').length,
+        revoked: sessionKeys.filter(k => k.status === 'revoked').length,
+        rented: sessionKeys.filter(k => k.status === 'rented').length,
+        totalEarnings: sessionKeys.reduce((sum, k) => {
+          return k.earnings ? sum + k.earnings : sum;
+        }, 0)
+      };
+    } catch (error) {
+      console.error('Failed to get session key stats:', error);
+      return {
+        total: 0,
+        active: 0,
+        expired: 0,
+        revoked: 0,
+        rented: 0,
+        totalEarnings: 0
+      };
+    }
   }
 
   /**
@@ -726,7 +884,7 @@ export class SessionKeyService {
 
     // Store mock keys if none exist (only in browser environment)
     if (typeof window !== 'undefined' && window.localStorage) {
-      const existing = this.getStoredSessionKeys(userAddress);
+      const existing = this.getStoredSessionKeysFromLocalStorage(userAddress);
       if (existing.length === 0) {
         localStorage.setItem(`sessionKeys_${userAddress}`, JSON.stringify(mockKeys));
       }
@@ -761,20 +919,21 @@ if (typeof window !== 'undefined') {
       userAddress = (window as any).starknetAccount.address;
     }
     if (userAddress) {
-      const keys = sessionKeyService.getStoredSessionKeys(userAddress);
-      console.log('Stored session keys:', keys);
-      keys.forEach(key => {
-        if (key.sessionData?.key) {
-          const keyWithoutPrefix = key.sessionData.key.startsWith('0x') 
-            ? key.sessionData.key.slice(2) 
-            : key.sessionData.key;
-          console.log(`Key ${key.id}:`, {
-            key: key.sessionData.key,
-            keyWithoutPrefix,
-            length: keyWithoutPrefix.length,
-            isValid: sessionKeyService['validateFeltValue'](keyWithoutPrefix)
-          });
-        }
+      sessionKeyService.getStoredSessionKeys(userAddress).then(keys => {
+        console.log('Stored session keys:', keys);
+        keys.forEach(key => {
+          if (key.sessionData?.key) {
+            const keyWithoutPrefix = key.sessionData.key.startsWith('0x') 
+              ? key.sessionData.key.slice(2) 
+              : key.sessionData.key;
+            console.log(`Key ${key.id}:`, {
+              key: key.sessionData.key,
+              keyWithoutPrefix,
+              length: keyWithoutPrefix.length,
+              isValid: sessionKeyService['validateFeltValue'](keyWithoutPrefix)
+            });
+          }
+        });
       });
     } else {
       console.error('Please provide a user address or connect your wallet first');
