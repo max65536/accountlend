@@ -69,10 +69,94 @@ const PERMISSION_TO_POLICIES: { [key: string]: Policy[] } = {
 
 export class SessionKeyService {
   private provider: RpcProvider;
+  private readonly STARKNET_FELT_MAX = BigInt('0x800000000000011000000000000000000000000000000000000000000000001') - BigInt(1);
 
   constructor() {
     const networkConfig = getCurrentNetworkConfig();
     this.provider = new RpcProvider({ nodeUrl: networkConfig.rpcUrl });
+  }
+
+  /**
+   * Generate a valid session key that's guaranteed to be within Starknet felt range and short enough for Argent X
+   */
+  private generateValidSessionKey(): string {
+    try {
+      // Use an extremely small key size to avoid "too long" errors
+      // Generate a 64-bit number (8 bytes) which should definitely be safe for Argent X
+      const randomBytes = new Uint8Array(8); // 8 bytes = 64 bits
+      if (typeof window !== 'undefined' && window.crypto) {
+        window.crypto.getRandomValues(randomBytes);
+      } else {
+        // Fallback for non-browser environments
+        for (let i = 0; i < randomBytes.length; i++) {
+          randomBytes[i] = Math.floor(Math.random() * 256);
+        }
+      }
+      
+      // Convert bytes to BigInt
+      let randomBigInt = BigInt(0);
+      for (let i = 0; i < randomBytes.length; i++) {
+        randomBigInt = (randomBigInt << BigInt(8)) + BigInt(randomBytes[i]);
+      }
+      
+      // Add some timestamp uniqueness but keep it very small
+      const timestamp = BigInt(Date.now() % 0xFF); // Very small 8-bit timestamp
+      const sessionKey = randomBigInt + timestamp;
+      
+      // Ensure the result is within felt range (should always be true for 64-bit numbers)
+      const finalKey = sessionKey > this.STARKNET_FELT_MAX ? sessionKey % this.STARKNET_FELT_MAX : sessionKey;
+      
+      const keyHex = finalKey.toString(16);
+      
+      return keyHex;
+    } catch (error) {
+      console.error('Failed to generate session key with crypto, using fallback:', error);
+      
+      // Fallback method using Math.random with extremely small values
+      const randomValue = Math.floor(Math.random() * 0xFFFFFF); // 24-bit value
+      const timestamp = Date.now() % 0xFF; // 8-bit timestamp
+      const sessionKey = BigInt(randomValue) + BigInt(timestamp);
+      
+      const keyHex = sessionKey.toString(16);
+      
+      return keyHex;
+    }
+  }
+
+  /**
+   * Validate that a value is a proper Starknet felt
+   */
+  private validateFeltValue(value: string): boolean {
+    try {
+      // Remove 0x prefix if present
+      const cleanValue = value.startsWith('0x') ? value.slice(2) : value;
+      
+      // Check if it's valid hex
+      if (!/^[0-9a-fA-F]+$/.test(cleanValue)) {
+        return false;
+      }
+      
+      // Check if it's within felt range
+      const bigIntValue = BigInt('0x' + cleanValue);
+      return bigIntValue <= this.STARKNET_FELT_MAX && bigIntValue >= BigInt(0);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Format session key for Argent X Sessions (without 0x prefix, validated)
+   */
+  private formatSessionKeyForArgentX(sessionKey: string): string {
+    // Remove 0x prefix if present
+    const cleanKey = sessionKey.startsWith('0x') ? sessionKey.slice(2) : sessionKey;
+    
+    // Validate the key
+    if (!this.validateFeltValue(cleanKey)) {
+      throw new Error(`Invalid session key format: ${cleanKey}`);
+    }
+    
+    return cleanKey;
   }
 
   /**
@@ -107,16 +191,12 @@ export class SessionKeyService {
       // Create policies based on permissions
       const policies = this.createPoliciesFromPermissions(permissions);
 
-      // Generate a proper Starknet private key using Starknet.js built-in method
-      // This follows the official Starknet blog example: starknet.generatePrivateKey()
-      const sessionKeyBytes = ec.starkCurve.utils.randomPrivateKey();
-      
-      // Convert to hex string - the key is already properly formatted for Starknet
-      const sessionKeyHex = '0x' + Buffer.from(sessionKeyBytes).toString('hex');
+      // Generate a valid session key using the new method
+      const sessionKeyHex = this.generateValidSessionKey();
       
       // Validate the generated key
-      if (!/^0x[0-9a-fA-F]{64}$/.test(sessionKeyHex)) {
-        throw new Error('Generated session key has invalid format');
+      if (!this.validateFeltValue(sessionKeyHex)) {
+        throw new Error(`Generated session key is invalid or too large: ${sessionKeyHex}`);
       }
 
       // Generate unique session ID
@@ -134,7 +214,7 @@ export class SessionKeyService {
         status: 'active',
         owner: account.address,
         sessionData: {
-          key: sessionKeyHex,
+          key: '0x' + sessionKeyHex,
           policies
         }
       };
@@ -149,23 +229,8 @@ export class SessionKeyService {
             : policy.contractAddress
         }));
 
-        // Ensure session key is properly formatted as a valid Starknet felt
-        // Starknet felt max value is 2^251 - 1, so we need to ensure our key is within this range
-        const sessionKeyBigInt = BigInt(sessionKeyHex);
-        const STARKNET_FELT_MAX = BigInt('0x800000000000011000000000000000000000000000000000000000000000001') - BigInt(1);
-        
-        // If the key is too large, reduce it to fit within felt range
-        const validSessionKeyBigInt = sessionKeyBigInt > STARKNET_FELT_MAX 
-          ? sessionKeyBigInt % STARKNET_FELT_MAX 
-          : sessionKeyBigInt;
-        
-        // Convert back to hex string without 0x prefix for Argent X
-        const cleanSessionKey = validSessionKeyBigInt.toString(16);
-        
-        // Validate the clean session key is proper hex
-        if (!/^[0-9a-fA-F]+$/.test(cleanSessionKey)) {
-          throw new Error('Session key contains invalid hex characters');
-        }
+        // Format session key for Argent X (without 0x prefix, validated)
+        const cleanSessionKey = this.formatSessionKeyForArgentX(sessionKeyHex);
 
         const sessionRequest: RequestSession = {
           key: cleanSessionKey, // Use clean key without 0x prefix, within felt range
@@ -191,8 +256,6 @@ export class SessionKeyService {
         // Create signed session with account wrapper
         const signedSession = await createSession(sessionRequest, accountWrapper as any);
         storedSessionKey.sessionData!.signedSession = signedSession;
-        
-        console.log('Successfully created Argent X session with chainId:', networkConfig.chainId);
       } catch (sessionError) {
         console.warn('Failed to create Argent X session, using mock session:', sessionError);
         // Continue with mock session for demo purposes
@@ -275,15 +338,31 @@ export class SessionKeyService {
       
       const sessionKeys: StoredSessionKey[] = JSON.parse(stored);
       
+      // Validate all stored session keys and remove invalid ones
+      const validKeys = sessionKeys.filter(key => {
+        if (key.sessionData?.key) {
+          const keyWithoutPrefix = key.sessionData.key.startsWith('0x') 
+            ? key.sessionData.key.slice(2) 
+            : key.sessionData.key;
+          const isValid = this.validateFeltValue(keyWithoutPrefix);
+          if (!isValid) {
+            console.warn('Removing invalid session key from storage:', key.id, key.sessionData.key);
+          }
+          return isValid;
+        }
+        return true;
+      });
+      
       // Update expired sessions
       const now = Date.now();
-      const updatedKeys = sessionKeys.map(key => ({
+      const updatedKeys = validKeys.map(key => ({
         ...key,
         status: now > key.expiresAt ? 'expired' as const : key.status
       }));
 
-      // Save updated keys if any changed
-      const hasChanges = updatedKeys.some((key, index) => key.status !== sessionKeys[index].status);
+      // Save updated keys if any changed or invalid keys were removed
+      const hasChanges = updatedKeys.length !== sessionKeys.length || 
+        updatedKeys.some((key, index) => key.status !== validKeys[index]?.status);
       if (hasChanges) {
         localStorage.setItem(`sessionKeys_${userAddress}`, JSON.stringify(updatedKeys));
       }
@@ -590,6 +669,20 @@ export class SessionKeyService {
   }
 
   /**
+   * Clear all stored session keys for a user (useful for debugging)
+   */
+  clearStoredSessionKeys(userAddress: string): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem(`sessionKeys_${userAddress}`);
+        console.log('Cleared all stored session keys for user:', userAddress);
+      }
+    } catch (error) {
+      console.error('Failed to clear stored session keys:', error);
+    }
+  }
+
+  /**
    * Create mock session keys for demo purposes
    */
   createMockSessionKeys(userAddress: string): StoredSessionKey[] {
@@ -645,3 +738,68 @@ export class SessionKeyService {
 
 // Export singleton instance
 export const sessionKeyService = new SessionKeyService();
+
+// Add debugging functions to window object in browser environment
+if (typeof window !== 'undefined') {
+  (window as any).clearSessionKeys = (userAddress?: string) => {
+    if (!userAddress && (window as any).starknetAccount) {
+      userAddress = (window as any).starknetAccount.address;
+    }
+    if (userAddress) {
+      sessionKeyService.clearStoredSessionKeys(userAddress);
+      // Also clear any other potential caches
+      localStorage.removeItem('argent-x-sessions');
+      localStorage.removeItem('session-cache');
+      console.log('Cleared all session-related storage');
+    } else {
+      console.error('Please provide a user address or connect your wallet first');
+    }
+  };
+  
+  (window as any).debugSessionKeys = (userAddress?: string) => {
+    if (!userAddress && (window as any).starknetAccount) {
+      userAddress = (window as any).starknetAccount.address;
+    }
+    if (userAddress) {
+      const keys = sessionKeyService.getStoredSessionKeys(userAddress);
+      console.log('Stored session keys:', keys);
+      keys.forEach(key => {
+        if (key.sessionData?.key) {
+          const keyWithoutPrefix = key.sessionData.key.startsWith('0x') 
+            ? key.sessionData.key.slice(2) 
+            : key.sessionData.key;
+          console.log(`Key ${key.id}:`, {
+            key: key.sessionData.key,
+            keyWithoutPrefix,
+            length: keyWithoutPrefix.length,
+            isValid: sessionKeyService['validateFeltValue'](keyWithoutPrefix)
+          });
+        }
+      });
+    } else {
+      console.error('Please provide a user address or connect your wallet first');
+    }
+  };
+
+  // Override any existing createSessionKey function to ensure we use the fixed version
+  (window as any).createSessionKey = async (options: {
+    description: string;
+    price: string;
+    duration: number;
+    permissions: string[];
+  }) => {
+    const account = (window as any).starknetAccount;
+    if (!account) {
+      throw new Error('Please connect your wallet first');
+    }
+    
+    console.log('Using fixed createSessionKey function');
+    return await sessionKeyService.createSessionKey(
+      account,
+      options.duration,
+      options.permissions,
+      options.price,
+      options.description
+    );
+  };
+}
