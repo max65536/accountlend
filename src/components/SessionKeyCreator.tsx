@@ -91,7 +91,7 @@ export default function SessionKeyCreator() {
       
       try {
         // Create session key using the new service
-        const sessionKey = await sessionKeyService.createSessionKey(
+        const result = await sessionKeyService.createSessionKey(
           account as any,
           sessionData.duration,
           sessionData.permissions,
@@ -99,17 +99,40 @@ export default function SessionKeyCreator() {
           sessionData.description
         );
         
-        console.log('Session key created successfully:', sessionKey);
+        console.log('Session key created successfully:', result.sessionKey);
+        console.log('Transaction hash from contract:', result.transactionHash);
         
-        // Add transaction to tracking (simulate transaction hash for demo)
-        const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-        transactionService.addTransaction({
-          hash: mockTxHash,
-          type: 'session_create',
-          description: `Create session key: ${sessionData.description}`,
-          amount: sessionData.price,
-          sessionKeyId: sessionKey.id
-        });
+        // Add transaction to tracking with real transaction hash if available
+        if (result.transactionHash) {
+          console.log('✅ Using real transaction hash from contract');
+          transactionService.addTransaction({
+            hash: result.transactionHash,
+            type: 'session_create',
+            description: `Create session key: ${sessionData.description}`,
+            amount: sessionData.price,
+            sessionKeyId: result.sessionKey.id
+          });
+        } else {
+          console.log('⚠️ No transaction hash from contract, using mock hash');
+          // Generate a proper 64-character hex string for demo
+          const generateMockTxHash = () => {
+            const chars = '0123456789abcdef';
+            let result = '0x';
+            for (let i = 0; i < 64; i++) {
+              result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+          };
+          
+          const mockTxHash = generateMockTxHash();
+          transactionService.addTransaction({
+            hash: mockTxHash,
+            type: 'session_create',
+            description: `Create session key: ${sessionData.description}`,
+            amount: sessionData.price,
+            sessionKeyId: result.sessionKey.id
+          });
+        }
         
         setSuccess(true);
         

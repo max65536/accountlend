@@ -19,6 +19,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { transactionService, TransactionInfo } from '../services/transactionService';
+import { getCurrentNetworkConfig } from '../config/contracts';
 
 const getTransactionIcon = (type: TransactionInfo['type']) => {
   switch (type) {
@@ -119,7 +120,9 @@ const formatTimeAgo = (timestamp: number): string => {
 };
 
 const getExplorerUrl = (hash: string): string => {
-  return `https://sepolia.starkscan.co/tx/${hash}`;
+  // Import getCurrentNetworkConfig to get the correct explorer URL
+  const networkConfig = getCurrentNetworkConfig();
+  return `${networkConfig.explorerUrl}/tx/${hash}`;
 };
 
 interface TransactionHistoryProps {
@@ -140,15 +143,45 @@ export default function TransactionHistory({ className = '' }: TransactionHistor
   });
 
   useEffect(() => {
+    console.log('=== TRANSACTION HISTORY DEBUG ===');
+    console.log('🔄 Setting up transaction monitoring...');
+    
     // Subscribe to transaction updates
     const unsubscribe = transactionService.subscribe((newTransactions) => {
+      console.log('📨 Received transaction update from service');
+      console.log('📊 New transactions count:', newTransactions.length);
+      console.log('📝 Transaction details:', newTransactions);
+      
+      // Check each transaction hash format
+      newTransactions.forEach((tx, index) => {
+        console.log(`🔍 Transaction ${index + 1}:`);
+        console.log(`  - Hash: ${tx.hash}`);
+        console.log(`  - Hash length: ${tx.hash.length}`);
+        console.log(`  - Valid format: ${/^0x[0-9a-fA-F]{64}$/.test(tx.hash)}`);
+        console.log(`  - Type: ${tx.type}`);
+        console.log(`  - Status: ${tx.status}`);
+        console.log(`  - Description: ${tx.description}`);
+      });
+      
       setTransactions(newTransactions);
-      setStats(transactionService.getTransactionStats());
+      const newStats = transactionService.getTransactionStats();
+      console.log('📈 Updated stats:', newStats);
+      setStats(newStats);
     });
 
     // Load initial transactions
-    setTransactions(transactionService.getTransactions());
-    setStats(transactionService.getTransactionStats());
+    console.log('📥 Loading initial transactions...');
+    const initialTransactions = transactionService.getTransactions();
+    console.log('📊 Initial transactions count:', initialTransactions.length);
+    console.log('📝 Initial transactions:', initialTransactions);
+    
+    setTransactions(initialTransactions);
+    const initialStats = transactionService.getTransactionStats();
+    console.log('📈 Initial stats:', initialStats);
+    setStats(initialStats);
+    
+    console.log('✅ Transaction History component initialized');
+    console.log('=== END TRANSACTION HISTORY DEBUG ===');
 
     return unsubscribe;
   }, []);

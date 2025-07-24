@@ -22,6 +22,7 @@ import { cacheService } from "../services/cacheService";
 import { batchContractCall } from "../services/batchService";
 import { paginationService, createPaginationState, PaginationState } from "../services/paginationService";
 import { getSampleMarketplaceData } from "../utils/testDataLoader";
+import { transactionService } from "../services/transactionService";
 import { Account } from "starknet";
 
 interface SessionKeyListing {
@@ -246,17 +247,50 @@ export default function AccountMarket() {
     const handleRentSessionKey = async (sessionKey: string) => {
         if (!account.account || !account.address) return;
         
+        console.log('=== TRANSACTION HASH DEBUG ===');
+        console.log('🚀 Starting session key rental process...');
+        console.log('Session Key ID:', sessionKey);
+        console.log('Account Address:', account.address);
+        console.log('Account Object:', account.account);
+        
         setIsLoading(true);
         try {
+            // Find the listing to get session data
+            const listing = listings.find(l => l.sessionKey === sessionKey);
+            console.log('📋 Found listing:', listing);
+            
+            console.log('🔄 Attempting to rent via blockchainEventService...');
             // Use blockchain event service for renting
             const txHash = await blockchainEventService.rentSessionKey(sessionKey, account.account);
+            
+            console.log('✅ Transaction submitted successfully!');
+            console.log('📝 Raw transaction hash:', txHash);
+            console.log('📏 Hash length:', txHash.length);
+            console.log('🔍 Hash format check:', /^0x[0-9a-fA-F]{64}$/.test(txHash));
+            console.log('📊 Hash preview:', `${txHash.slice(0, 10)}...${txHash.slice(-8)}`);
+            
             setDivContent(`Session key rental transaction submitted: ${txHash.slice(0, 10)}...`);
+            
+            // Add transaction to transaction service for monitoring
+            console.log('💾 Adding transaction to transactionService...');
+            const transactionData = {
+                hash: txHash,
+                type: 'session_rent' as const,
+                description: `Rented session key: ${listing?.description || sessionKey}`,
+                amount: listing?.price,
+                from: account.address,
+                to: listing?.owner,
+                sessionKeyId: sessionKey
+            };
+            console.log('📦 Transaction data to be stored:', transactionData);
+            
+            transactionService.addTransaction(transactionData);
+            console.log('✅ Transaction added to monitoring service');
             
             // Try to import the session key for local management
             try {
-                // Find the listing to get session data
-                const listing = listings.find(l => l.sessionKey === sessionKey);
                 if (listing) {
+                    console.log('📥 Importing session key for local management...');
                     const exportData = JSON.stringify({
                         id: listing.sessionKey,
                         description: listing.description,
@@ -271,33 +305,70 @@ export default function AccountMarket() {
                     });
                     
                     await sessionKeyService.importSessionKey(exportData, account.address);
+                    console.log('✅ Session key imported successfully');
                     setDivContent(`Session key rented and imported successfully!`);
                 }
             } catch (importError) {
-                console.warn('Failed to import session key locally:', importError);
+                console.warn('⚠️ Failed to import session key locally:', importError);
                 // Continue with just the rental success message
             }
             
             // Refresh listings after successful transaction
             setTimeout(() => {
+                console.log('🔄 Refreshing listings...');
                 loadListings();
             }, 3000);
+            
         } catch (err) {
+            console.log('❌ Primary method failed, trying fallback...');
+            console.error('Primary error:', err);
+            
             // Fallback to old method if blockchain event service fails
             try {
+                console.log('🔄 Attempting fallback via rentSessionKey...');
                 const txHash = await rentSessionKey(account.account as Account, sessionKey);
+                
+                console.log('✅ Fallback transaction submitted!');
+                console.log('📝 Fallback transaction hash:', txHash);
+                console.log('📏 Fallback hash length:', txHash.length);
+                console.log('🔍 Fallback hash format check:', /^0x[0-9a-fA-F]{64}$/.test(txHash));
+                console.log('📊 Fallback hash preview:', `${txHash.slice(0, 10)}...${txHash.slice(-8)}`);
+                
                 setDivContent(`Session key rental transaction submitted: ${txHash.slice(0, 10)}...`);
                 
+                // Add transaction to transaction service for monitoring (fallback method)
+                console.log('💾 Adding fallback transaction to transactionService...');
+                const listing = listings.find(l => l.sessionKey === sessionKey);
+                const fallbackTransactionData = {
+                    hash: txHash,
+                    type: 'session_rent' as const,
+                    description: `Rented session key: ${listing?.description || sessionKey}`,
+                    amount: listing?.price,
+                    from: account.address,
+                    to: listing?.owner,
+                    sessionKeyId: sessionKey
+                };
+                console.log('📦 Fallback transaction data:', fallbackTransactionData);
+                
+                transactionService.addTransaction(fallbackTransactionData);
+                console.log('✅ Fallback transaction added to monitoring service');
+                
                 setTimeout(() => {
+                    console.log('🔄 Refreshing listings after fallback...');
                     loadListings();
                 }, 3000);
+                
             } catch (fallbackErr) {
+                console.error('❌ Both methods failed!');
+                console.error('Fallback error:', fallbackErr);
                 const errorMessage = handleContractError(fallbackErr);
                 setError(errorMessage);
                 setDivContent(`Failed to rent session key: ${errorMessage}`);
             }
         } finally {
             setIsLoading(false);
+            console.log('🏁 Transaction process completed');
+            console.log('=== END TRANSACTION HASH DEBUG ===');
         }
     };
 
@@ -306,8 +377,8 @@ export default function AccountMarket() {
         if (!account.address) return false;
         
         try {
-            const storedKeys = sessionKeyService.getStoredSessionKeys(account.address);
-            const storedKey = storedKeys.find(k => k.id === sessionKey);
+            const storedKeys = await sessionKeyService.getStoredSessionKeys(account.address);
+            const storedKey = storedKeys.find((k: StoredSessionKey) => k.id === sessionKey);
             
             if (storedKey) {
                 return await sessionKeyService.validateSessionKey(storedKey);
@@ -325,8 +396,8 @@ export default function AccountMarket() {
         if (!account.address) return null;
         
         try {
-            const storedKeys = sessionKeyService.getStoredSessionKeys(account.address);
-            const storedKey = storedKeys.find(k => k.id === sessionKey);
+            const storedKeys = await sessionKeyService.getStoredSessionKeys(account.address);
+            const storedKey = storedKeys.find((k: StoredSessionKey) => k.id === sessionKey);
             
             if (storedKey) {
                 return await sessionKeyService.getSessionKeyDetails(storedKey);

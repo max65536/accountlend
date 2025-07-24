@@ -182,7 +182,7 @@ export class SessionKeyService {
     permissions: string[],
     price: string,
     description: string
-  ): Promise<StoredSessionKey> {
+  ): Promise<{ sessionKey: StoredSessionKey; transactionHash?: string }> {
     try {
       // Convert duration from hours to milliseconds for expiry
       const durationInMs = duration * 3600 * 1000;
@@ -261,10 +261,13 @@ export class SessionKeyService {
         // Continue with mock session for demo purposes
       }
 
-      // Store session key locally and in contract
-      this.storeSessionKey(storedSessionKey, account);
+      // Store session key locally and in contract - get the real transaction hash
+      const transactionHash = await this.storeSessionKey(storedSessionKey, account);
 
-      return storedSessionKey;
+      return { 
+        sessionKey: storedSessionKey, 
+        transactionHash: transactionHash || undefined 
+      };
     } catch (error) {
       console.error('Failed to create session key:', error);
       throw new Error(`Session key creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -437,21 +440,21 @@ export class SessionKeyService {
   /**
    * Store session key in smart contract
    */
-  private async storeSessionKey(sessionKey: StoredSessionKey, account?: Account): Promise<void> {
+  private async storeSessionKey(sessionKey: StoredSessionKey, account?: Account): Promise<string | null> {
     const networkConfig = getCurrentNetworkConfig();
     
     // Check if we have a deployed contract address
     if (!networkConfig.sessionKeyManagerAddress || networkConfig.sessionKeyManagerAddress === '0x0') {
       console.warn('Session Key Manager contract not deployed, using local storage');
       this.storeSessionKeyInLocalStorage(sessionKey);
-      return;
+      return null;
     }
 
     // If no account provided, fall back to local storage
     if (!account) {
       console.warn('No account provided for contract interaction, using local storage');
       this.storeSessionKeyInLocalStorage(sessionKey);
-      return;
+      return null;
     }
 
     try {
@@ -473,17 +476,25 @@ export class SessionKeyService {
       // Convert price from ETH to wei (multiply by 10^18)
       const priceInWei = num.toBigInt(parseFloat(sessionKey.price) * Math.pow(10, 18));
       
-      await contract.create_session_key(
+      console.log('🚀 Calling contract.create_session_key...');
+      const result = await contract.create_session_key(
         sessionKey.owner,
         sessionKey.duration,
         permissions,
         priceInWei.toString()
       );
       
+      console.log('✅ Contract call result:', result);
+      console.log('📝 Transaction hash:', result.transaction_hash);
+      console.log('📏 Hash length:', result.transaction_hash?.length);
+      console.log('🔍 Hash format valid:', /^0x[0-9a-fA-F]{64}$/.test(result.transaction_hash || ''));
+      
       console.log('Session key stored in contract:', sessionKey.id);
+      return result.transaction_hash || null;
     } catch (error) {
       console.error('Failed to store session key in contract:', error);
       this.storeSessionKeyInLocalStorage(sessionKey);
+      return null;
     }
   }
 
@@ -652,7 +663,7 @@ export class SessionKeyService {
       };
 
       // Store imported session key
-      this.storeSessionKey(sessionKey);
+      await this.storeSessionKey(sessionKey);
 
       return sessionKey;
     } catch (error) {
@@ -854,14 +865,14 @@ export class SessionKeyService {
     
     for (const config of sessionConfigs) {
       try {
-        const sessionKey = await this.createSessionKey(
+        const result = await this.createSessionKey(
           account,
           config.duration,
           config.permissions,
           config.price,
           config.description
         );
-        results.push(sessionKey);
+        results.push(result.sessionKey);
       } catch (error) {
         console.error('Failed to create session key in batch:', error);
         // Continue with other session keys

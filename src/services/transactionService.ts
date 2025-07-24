@@ -48,17 +48,35 @@ export class TransactionService {
    * Add a new transaction to track
    */
   addTransaction(transaction: Omit<TransactionInfo, 'timestamp' | 'status'>): void {
+    console.log('=== TRANSACTION SERVICE DEBUG ===');
+    console.log('📥 Adding new transaction to monitoring...');
+    console.log('📝 Input transaction data:', transaction);
+    console.log('📏 Hash length check:', transaction.hash.length);
+    console.log('🔍 Hash format validation:', /^0x[0-9a-fA-F]{64}$/.test(transaction.hash));
+    
     const txInfo: TransactionInfo = {
       ...transaction,
       timestamp: Date.now(),
       status: 'pending'
     };
 
+    console.log('📦 Final transaction info to store:', txInfo);
+    console.log('🗂️ Current transactions count before:', this.transactions.size);
+
     this.transactions.set(transaction.hash, txInfo);
+    console.log('✅ Transaction stored in memory');
+    console.log('🗂️ Current transactions count after:', this.transactions.size);
+    
     this.saveTransactions();
+    console.log('💾 Transaction saved to localStorage');
+    
     this.notifyListeners();
+    console.log('📢 Listeners notified');
 
     // Add notification for new transaction
+    const explorerUrl = this.getExplorerUrl(transaction.hash);
+    console.log('🔗 Generated explorer URL:', explorerUrl);
+    
     this.addNotification({
       type: 'info',
       title: 'Transaction Submitted',
@@ -66,11 +84,14 @@ export class TransactionService {
       autoHide: true,
       duration: 5000,
       actionLabel: 'View on Explorer',
-      actionUrl: this.getExplorerUrl(transaction.hash)
+      actionUrl: explorerUrl
     });
+    console.log('🔔 Notification added');
 
     // Start monitoring this transaction
+    console.log('👀 Starting transaction monitoring...');
     this.monitorTransaction(transaction.hash);
+    console.log('=== END TRANSACTION SERVICE DEBUG ===');
   }
 
   /**
