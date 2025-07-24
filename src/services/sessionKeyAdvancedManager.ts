@@ -164,7 +164,7 @@ export class SessionKeyAdvancedManager {
     const successful: string[] = [];
     const failed: { id: string; error: string }[] = [];
 
-    const sessionKeys = sessionKeyService.getStoredSessionKeys(userAddress);
+    const sessionKeys = await sessionKeyService.getStoredSessionKeys(userAddress);
 
     for (const sessionKeyId of operation.sessionKeyIds) {
       try {
@@ -235,7 +235,7 @@ export class SessionKeyAdvancedManager {
 
     // Update stored session key
     const userAddress = sessionKey.owner;
-    const existing = sessionKeyService.getStoredSessionKeys(userAddress);
+    const existing = await sessionKeyService.getStoredSessionKeys(userAddress);
     const updated = existing.map(key =>
       key.id === sessionKey.id ? sessionKey : key
     );
@@ -253,7 +253,7 @@ export class SessionKeyAdvancedManager {
 
     // Update stored session key
     const userAddress = sessionKey.owner;
-    const existing = sessionKeyService.getStoredSessionKeys(userAddress);
+    const existing = await sessionKeyService.getStoredSessionKeys(userAddress);
     const updated = existing.map(key =>
       key.id === sessionKey.id ? sessionKey : key
     );
@@ -266,14 +266,14 @@ export class SessionKeyAdvancedManager {
   /**
    * Generate comprehensive analytics for session keys
    */
-  generateAnalytics(userAddress: string): SessionKeyAnalytics {
+  async generateAnalytics(userAddress: string): Promise<SessionKeyAnalytics> {
     const cacheKey = `analytics_${userAddress}`;
     const cached = this.cache.get(cacheKey);
     if (cached) {
       return cached as SessionKeyAnalytics;
     }
 
-    const sessionKeys = sessionKeyService.getStoredSessionKeys(userAddress);
+    const sessionKeys = await sessionKeyService.getStoredSessionKeys(userAddress);
 
     // Basic statistics
     const totalKeys = sessionKeys.length;
@@ -393,8 +393,8 @@ export class SessionKeyAdvancedManager {
   /**
    * Get session keys expiring soon (within specified hours)
    */
-  getExpiringSoon(userAddress: string, withinHours: number = 24): StoredSessionKey[] {
-    const sessionKeys = sessionKeyService.getStoredSessionKeys(userAddress);
+  async getExpiringSoon(userAddress: string, withinHours: number = 24): Promise<StoredSessionKey[]> {
+    const sessionKeys = await sessionKeyService.getStoredSessionKeys(userAddress);
     const threshold = Date.now() + (withinHours * 60 * 60 * 1000);
 
     return sessionKeys.filter(key =>
@@ -407,14 +407,14 @@ export class SessionKeyAdvancedManager {
   /**
    * Get session key recommendations based on user patterns
    */
-  getSessionKeyRecommendations(userAddress: string): {
+  async getSessionKeyRecommendations(userAddress: string): Promise<{
     suggestedPermissions: string[];
     suggestedDuration: number;
     suggestedPrice: string;
     reasoning: string;
-  } {
-    const sessionKeys = sessionKeyService.getStoredSessionKeys(userAddress);
-    const analytics = this.generateAnalytics(userAddress);
+  }> {
+    const sessionKeys = await sessionKeyService.getStoredSessionKeys(userAddress);
+    const analytics = await this.generateAnalytics(userAddress);
 
     // Most popular permissions
     const suggestedPermissions = analytics.popularPermissions
@@ -446,7 +446,7 @@ export class SessionKeyAdvancedManager {
   /**
    * Security audit for session keys
    */
-  performSecurityAudit(userAddress: string): {
+  async performSecurityAudit(userAddress: string): Promise<{
     issues: Array<{
       severity: 'low' | 'medium' | 'high' | 'critical';
       type: string;
@@ -455,8 +455,8 @@ export class SessionKeyAdvancedManager {
       recommendation: string;
     }>;
     score: number; // 0-100
-  } {
-    const sessionKeys = sessionKeyService.getStoredSessionKeys(userAddress);
+  }> {
+    const sessionKeys = await sessionKeyService.getStoredSessionKeys(userAddress);
     const issues: Array<{
       severity: 'low' | 'medium' | 'high' | 'critical';
       type: string;
@@ -531,12 +531,12 @@ export class SessionKeyAdvancedManager {
   /**
    * Export session keys to various formats
    */
-  exportSessionKeys(
+  async exportSessionKeys(
     userAddress: string,
     format: 'json' | 'csv' | 'pdf',
     filter?: SessionKeyFilter
-  ): string | Blob {
-    const sessionKeys = sessionKeyService.getStoredSessionKeys(userAddress);
+  ): Promise<string | Blob> {
+    const sessionKeys = await sessionKeyService.getStoredSessionKeys(userAddress);
     const filtered = filter 
       ? this.filterAndSortSessionKeys(sessionKeys, filter)
       : sessionKeys;

@@ -109,6 +109,9 @@ export default function SessionKeyManagerAdvanced() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [securityAudit, setSecurityAudit] = useState<any>(null);
+  const [expiringSoon, setExpiringSoon] = useState<StoredSessionKey[]>([]);
+  const [recommendations, setRecommendations] = useState<any>(null);
   
   // Filter and sort state
   const [filter, setFilter] = useState<SessionKeyFilter>({});
@@ -134,24 +137,24 @@ export default function SessionKeyManagerAdvanced() {
     }
   }, [sessionKeys, filter, sort, searchTerm]);
 
-  const loadSessionKeys = () => {
+  const loadSessionKeys = async () => {
     if (!address) return;
     
-    const keys = sessionKeyService.getStoredSessionKeys(address);
+    const keys = await sessionKeyService.getStoredSessionKeys(address);
     if (keys.length === 0) {
       // Create mock keys for demo if none exist
       sessionKeyService.createMockSessionKeys(address);
-      const mockKeys = sessionKeyService.getStoredSessionKeys(address);
+      const mockKeys = await sessionKeyService.getStoredSessionKeys(address);
       setSessionKeys(mockKeys);
     } else {
       setSessionKeys(keys);
     }
   };
 
-  const loadAnalytics = () => {
+  const loadAnalytics = async () => {
     if (!address) return;
     
-    const analyticsData = sessionKeyAdvancedManager.generateAnalytics(address);
+    const analyticsData = await sessionKeyAdvancedManager.generateAnalytics(address);
     setAnalytics(analyticsData);
   };
 
@@ -214,11 +217,11 @@ export default function SessionKeyManagerAdvanced() {
     }
   };
 
-  const handleExportKeys = (format: 'json' | 'csv' | 'pdf') => {
+  const handleExportKeys = async (format: 'json' | 'csv' | 'pdf') => {
     if (!address) return;
     
     try {
-      const exportData = sessionKeyAdvancedManager.exportSessionKeys(address, format, filter);
+      const exportData = await sessionKeyAdvancedManager.exportSessionKeys(address, format, filter);
       
       if (typeof exportData === 'string') {
         // For JSON and CSV
@@ -249,19 +252,29 @@ export default function SessionKeyManagerAdvanced() {
     }
   };
 
-  const getSecurityAudit = () => {
-    if (!address) return null;
-    return sessionKeyAdvancedManager.performSecurityAudit(address);
-  };
+  // Load additional data when component mounts or account changes
+  useEffect(() => {
+    if (account && address) {
+      loadAdditionalData();
+    }
+  }, [account, address]);
 
-  const getExpiringSoon = () => {
-    if (!address) return [];
-    return sessionKeyAdvancedManager.getExpiringSoon(address, 24);
-  };
-
-  const getRecommendations = () => {
-    if (!address) return null;
-    return sessionKeyAdvancedManager.getSessionKeyRecommendations(address);
+  const loadAdditionalData = async () => {
+    if (!address) return;
+    
+    try {
+      const [auditData, expiringSoonData, recommendationsData] = await Promise.all([
+        sessionKeyAdvancedManager.performSecurityAudit(address),
+        sessionKeyAdvancedManager.getExpiringSoon(address, 24),
+        sessionKeyAdvancedManager.getSessionKeyRecommendations(address)
+      ]);
+      
+      setSecurityAudit(auditData);
+      setExpiringSoon(expiringSoonData);
+      setRecommendations(recommendationsData);
+    } catch (error) {
+      console.error('Failed to load additional data:', error);
+    }
   };
 
   if (!account) {
@@ -275,10 +288,6 @@ export default function SessionKeyManagerAdvanced() {
       </div>
     );
   }
-
-  const securityAudit = getSecurityAudit();
-  const expiringSoon = getExpiringSoon();
-  const recommendations = getRecommendations();
 
   return (
     <div className="space-y-6">
