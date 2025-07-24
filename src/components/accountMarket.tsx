@@ -509,14 +509,14 @@ export default function AccountMarket() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h3 className="text-lg font-semibold">Session Key Marketplace</h3>
-                    <p className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600">
                         {useMockData ? `${tasks.length} mock session keys` : `${listings.length} live session keys`}
                         {useMockData && (
                             <Badge variant="outline" className="ml-2 text-xs">
                                 Mock Data
                             </Badge>
                         )}
-                    </p>
+                    </div>
                 </div>
                 <div className="flex gap-2">
                     <Button

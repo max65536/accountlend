@@ -107,11 +107,17 @@ export class SessionKeyService {
       // Create policies based on permissions
       const policies = this.createPoliciesFromPermissions(permissions);
 
-      // Generate a random session key
+      // Generate a proper Starknet private key using Starknet.js built-in method
+      // This follows the official Starknet blog example: starknet.generatePrivateKey()
       const sessionKeyBytes = ec.starkCurve.utils.randomPrivateKey();
-      const sessionKey = '0x' + Array.from(sessionKeyBytes)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      
+      // Convert to hex string - the key is already properly formatted for Starknet
+      const sessionKeyHex = '0x' + Buffer.from(sessionKeyBytes).toString('hex');
+      
+      // Validate the generated key
+      if (!/^0x[0-9a-fA-F]{64}$/.test(sessionKeyHex)) {
+        throw new Error('Generated session key has invalid format');
+      }
 
       // Generate unique session ID
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -128,24 +134,65 @@ export class SessionKeyService {
         status: 'active',
         owner: account.address,
         sessionData: {
-          key: sessionKey,
+          key: sessionKeyHex,
           policies
         }
       };
 
       // Try to create actual session with Argent X Sessions
       try {
+        // Ensure policies have valid contract addresses (no wildcards for Argent X)
+        const validPolicies = policies.map(policy => ({
+          ...policy,
+          contractAddress: policy.contractAddress === '*' 
+            ? '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7' // Default to ETH contract
+            : policy.contractAddress
+        }));
+
+        // Ensure session key is properly formatted as a valid Starknet felt
+        // Starknet felt max value is 2^251 - 1, so we need to ensure our key is within this range
+        const sessionKeyBigInt = BigInt(sessionKeyHex);
+        const STARKNET_FELT_MAX = BigInt('0x800000000000011000000000000000000000000000000000000000000000001') - BigInt(1);
+        
+        // If the key is too large, reduce it to fit within felt range
+        const validSessionKeyBigInt = sessionKeyBigInt > STARKNET_FELT_MAX 
+          ? sessionKeyBigInt % STARKNET_FELT_MAX 
+          : sessionKeyBigInt;
+        
+        // Convert back to hex string without 0x prefix for Argent X
+        const cleanSessionKey = validSessionKeyBigInt.toString(16);
+        
+        // Validate the clean session key is proper hex
+        if (!/^[0-9a-fA-F]+$/.test(cleanSessionKey)) {
+          throw new Error('Session key contains invalid hex characters');
+        }
+
         const sessionRequest: RequestSession = {
-          key: sessionKey,
+          key: cleanSessionKey, // Use clean key without 0x prefix, within felt range
           expires: Math.floor(expiresAt / 1000), // Convert to seconds
-          policies
+          policies: validPolicies
         };
 
-        // Create signed session
-        const signedSession = await createSession(sessionRequest, account as any);
+        // Ensure account has chainId set for signing
+        const networkConfig = getCurrentNetworkConfig();
+        
+        // Create an account wrapper that has the interface Argent X Sessions expects
+        const accountWrapper = {
+          ...account,
+          chainId: networkConfig.chainId,
+          // Ensure signMessage method exists and is properly bound
+          signMessage: account.signMessage?.bind(account) || 
+            (() => Promise.reject(new Error('signMessage not available on this account type'))),
+          // Ensure other required methods exist
+          execute: account.execute?.bind(account),
+          estimateFee: account.estimateFee?.bind(account)
+        };
+
+        // Create signed session with account wrapper
+        const signedSession = await createSession(sessionRequest, accountWrapper as any);
         storedSessionKey.sessionData!.signedSession = signedSession;
         
-        console.log('Successfully created Argent X session');
+        console.log('Successfully created Argent X session with chainId:', networkConfig.chainId);
       } catch (sessionError) {
         console.warn('Failed to create Argent X session, using mock session:', sessionError);
         // Continue with mock session for demo purposes
@@ -460,11 +507,26 @@ export class SessionKeyService {
         return false;
       }
 
-      // If we have a signed session, we could verify it on-chain
-      // This would require additional contract calls to verify the session is still valid
-      // For now, we'll rely on the basic validation
-      
-      return true;
+      // Try to verify session on-chain using deployed contract
+      try {
+        const networkConfig = getCurrentNetworkConfig();
+        const { Contract } = await import('starknet');
+        
+        // Import contract ABI
+        const sessionManagerAbi = await import('../contracts/SessionKeyManager.json');
+        const contract = new Contract(
+          sessionManagerAbi.default.abi,
+          networkConfig.sessionKeyManagerAddress,
+          this.provider
+        );
+
+        // Call contract to validate session key
+        const isValid = await contract.validate_session_key(sessionKey.id);
+        return Boolean(isValid);
+      } catch (contractError) {
+        console.warn('Contract validation failed, using local validation:', contractError);
+        return basicValidation;
+      }
     } catch (error) {
       console.error('On-chain session validation failed:', error);
       return false;

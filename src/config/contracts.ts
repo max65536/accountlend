@@ -40,12 +40,16 @@ export const NETWORK_CONFIG = {
     chainId: '0x534e5f5345504f4c4941', // SN_SEPOLIA
     rpcUrl: 'https://starknet-sepolia.public.blastapi.io',
     explorerUrl: 'https://sepolia.starkscan.co',
+    sessionKeyManagerAddress: CONTRACT_ADDRESSES.testnet.SESSION_KEY_MANAGER,
+    marketplaceAddress: CONTRACT_ADDRESSES.testnet.ACCOUNT_MARKET,
   },
   mainnet: {
     name: 'Starknet Mainnet',
     chainId: '0x534e5f4d41494e', // SN_MAIN
     rpcUrl: 'https://starknet-mainnet.public.blastapi.io',
     explorerUrl: 'https://starkscan.co',
+    sessionKeyManagerAddress: CONTRACT_ADDRESSES.mainnet.SESSION_KEY_MANAGER,
+    marketplaceAddress: CONTRACT_ADDRESSES.mainnet.ACCOUNT_MARKET,
   }
 };
 
