@@ -19,6 +19,10 @@ trait ISessionKeyManager<TContractState> {
     fn is_session_expired(self: @TContractState, session_key: felt252) -> bool;
     
     fn get_session_permissions(self: @TContractState, session_key: felt252) -> Span<felt252>;
+    
+    fn get_user_session_keys(self: @TContractState, user: ContractAddress) -> Span<felt252>;
+    
+    fn get_user_session_count(self: @TContractState, user: ContractAddress) -> u32;
 }
 
 #[derive(Drop, Serde, starknet::Store, Copy)]
@@ -44,6 +48,7 @@ mod SessionKeyManager {
     struct Storage {
         session_keys: Map<felt252, SessionKeyInfo>,
         owner_session_count: Map<ContractAddress, u32>,
+        owner_sessions: Map<(ContractAddress, u32), felt252>,
         next_session_id: felt252,
     }
 
@@ -116,8 +121,9 @@ mod SessionKeyManager {
             self.session_keys.write(session_key, session_info);
             self.next_session_id.write(session_id + 1);
             
-            // Update owner's session count
+            // Update owner's session count and store session mapping
             let current_count = self.owner_session_count.read(owner);
+            self.owner_sessions.write((owner, current_count), session_key);
             self.owner_session_count.write(owner, current_count + 1);
             
             self.emit(SessionKeyCreated {
@@ -177,6 +183,27 @@ mod SessionKeyManager {
             // For now, return empty span. In a real implementation, 
             // permissions would be stored differently or reconstructed
             array![].span()
+        }
+
+        fn get_user_session_keys(self: @ContractState, user: ContractAddress) -> Span<felt252> {
+            let mut session_keys = ArrayTrait::new();
+            let count = self.owner_session_count.read(user);
+            
+            let mut i = 0;
+            loop {
+                if i >= count {
+                    break;
+                }
+                let session_key = self.owner_sessions.read((user, i));
+                session_keys.append(session_key);
+                i += 1;
+            };
+            
+            session_keys.span()
+        }
+
+        fn get_user_session_count(self: @ContractState, user: ContractAddress) -> u32 {
+            self.owner_session_count.read(user)
         }
     }
 

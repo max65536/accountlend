@@ -72,22 +72,27 @@ else
     echo -e "${GREEN}✓ Account already deployed${NC}"
 fi
 
+# Change to contract directory for sncast commands
+cd contract/lendaccount
+
 # Declare SessionKeyManager contract
 echo -e "${YELLOW}Declaring SessionKeyManager contract...${NC}"
 SESSION_MANAGER_DECLARE_RESULT=$(sncast declare \
     --contract-name SessionKeyManager \
-    --network $NETWORK \
-    --account $ACCOUNT_NAME)
+    --network $NETWORK)
 
 SESSION_MANAGER_CLASS_HASH=$(echo "$SESSION_MANAGER_DECLARE_RESULT" | grep -o "0x[0-9a-fA-F]*" | head -1)
 echo -e "${GREEN}✓ SessionKeyManager declared with class hash: ${SESSION_MANAGER_CLASS_HASH}${NC}"
+
+# Wait a moment for declaration to be processed
+echo -e "${YELLOW}Waiting for declaration to be processed...${NC}"
+sleep 10
 
 # Deploy SessionKeyManager contract
 echo -e "${YELLOW}Deploying SessionKeyManager contract...${NC}"
 SESSION_MANAGER_DEPLOY_RESULT=$(sncast deploy \
     --class-hash $SESSION_MANAGER_CLASS_HASH \
-    --network $NETWORK \
-    --account $ACCOUNT_NAME)
+    --network $NETWORK)
 
 SESSION_MANAGER_ADDRESS=$(echo "$SESSION_MANAGER_DEPLOY_RESULT" | grep -o "0x[0-9a-fA-F]*" | head -1)
 echo -e "${GREEN}✓ SessionKeyManager deployed at: ${SESSION_MANAGER_ADDRESS}${NC}"
@@ -96,8 +101,7 @@ echo -e "${GREEN}✓ SessionKeyManager deployed at: ${SESSION_MANAGER_ADDRESS}${
 echo -e "${YELLOW}Declaring SessionKeyMarketplace contract...${NC}"
 MARKETPLACE_DECLARE_RESULT=$(sncast declare \
     --contract-name SessionKeyMarketplace \
-    --network $NETWORK \
-    --account $ACCOUNT_NAME)
+    --network $NETWORK)
 
 MARKETPLACE_CLASS_HASH=$(echo "$MARKETPLACE_DECLARE_RESULT" | grep -o "0x[0-9a-fA-F]*" | head -1)
 echo -e "${GREEN}✓ SessionKeyMarketplace declared with class hash: ${MARKETPLACE_CLASS_HASH}${NC}"
@@ -107,11 +111,13 @@ echo -e "${YELLOW}Deploying SessionKeyMarketplace contract...${NC}"
 MARKETPLACE_DEPLOY_RESULT=$(sncast deploy \
     --class-hash $MARKETPLACE_CLASS_HASH \
     --constructor-calldata $SESSION_MANAGER_ADDRESS $ETH_TOKEN_ADDRESS $MARKETPLACE_FEE $ACCOUNT_ADDRESS \
-    --network $NETWORK \
-    --account $ACCOUNT_NAME)
+    --network $NETWORK)
 
 MARKETPLACE_ADDRESS=$(echo "$MARKETPLACE_DEPLOY_RESULT" | grep -o "0x[0-9a-fA-F]*" | head -1)
 echo -e "${GREEN}✓ SessionKeyMarketplace deployed at: ${MARKETPLACE_ADDRESS}${NC}"
+
+# Return to root directory
+cd ../..
 
 # Update frontend configuration
 echo -e "${YELLOW}Updating frontend configuration...${NC}"

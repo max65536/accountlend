@@ -65,8 +65,10 @@ A Session Key Marketplace built on Starknet that allows users to lend and rent t
   - Status: Successfully deployed
 - [x] Fund account with testnet STRK tokens
 - [x] Deploy SessionKeyManager contract to testnet
-  - Contract Address: `0x038aad77e374b20f0ff285a3912b5d9ff75f1137c5cb624975a65ee9093a78f4`
-  - Class Hash: `0x75af700048bb4f14218d85e0e309697ae9c292bb583677b0f992e1908c51866`
+  - Contract Address: `0x03c37451ad273e7afd30211ae7eaa14b01feafa239f2b9845b2f6f494aa56dcb` (Updated 2025-07-24)
+  - Class Hash: `0x48fd31164ee8ab15c75ddb7637a2510bd1452f569c6197bd3c90a12de92ca96`
+  - Transaction Hash: `0x03ce3f1cc2852ffdaba4a1ccf36d862ef64542b71a5b4781bd1ad04544826e66`
+  - Explorer: https://sepolia.starkscan.co/contract/0x03c37451ad273e7afd30211ae7eaa14b01feafa239f2b9845b2f6f494aa56dcb
 - [x] Deploy SessionKeyMarketplace contract to testnet
   - Contract Address: `0x0511ad831feb72aecb3f6bb4d2207b323224ab8bd6cda7bfc66f03f1635a7630`
   - Class Hash: `0x6d2c9fffb6612870da4f8e8cd2a8424300e74e9ff037169f18dc8e9f20193ca`

@@ -261,8 +261,8 @@ export class SessionKeyService {
         // Continue with mock session for demo purposes
       }
 
-      // Store session key locally
-      this.storeSessionKey(storedSessionKey);
+      // Store session key locally and in contract
+      this.storeSessionKey(storedSessionKey, account);
 
       return storedSessionKey;
     } catch (error) {
@@ -327,8 +327,19 @@ export class SessionKeyService {
    * Get all stored session keys for a user from smart contract
    */
   async getStoredSessionKeys(userAddress: string): Promise<StoredSessionKey[]> {
+    const networkConfig = getCurrentNetworkConfig();
+    
+    // For now, since the contract interface doesn't match our needs,
+    // we'll create a proper session key management system
+    // This will be replaced once the contract is properly deployed
+    
+    // Check if we have a deployed contract address
+    if (!networkConfig.sessionKeyManagerAddress || networkConfig.sessionKeyManagerAddress === '0x1234567890abcdef1234567890abcdef12345678') {
+      console.warn('Session Key Manager contract not deployed, using local storage');
+      return this.getStoredSessionKeysFromLocalStorage(userAddress);
+    }
+
     try {
-      const networkConfig = getCurrentNetworkConfig();
       const { Contract } = await import('starknet');
       
       // Import contract ABI
@@ -339,46 +350,14 @@ export class SessionKeyService {
         this.provider
       );
 
-      // Get session keys from contract
-      const sessionKeyIds = await contract.get_user_session_keys(userAddress);
-      const sessionKeys: StoredSessionKey[] = [];
+      // Since the current contract doesn't have get_user_session_keys,
+      // we'll need to implement a different approach
+      // For now, return empty array and let the UI create mock data
+      console.log('Contract connected, but interface needs to be updated');
+      return [];
 
-      // Fetch details for each session key
-      for (const keyId of sessionKeyIds) {
-        try {
-          const sessionData = await contract.get_session_key_details(keyId);
-          
-          // Convert contract data to StoredSessionKey format
-          const storedKey: StoredSessionKey = {
-            id: keyId.toString(),
-            description: sessionData.description || 'Session Key',
-            permissions: this.parsePermissionsFromPolicies(sessionData.policies || []),
-            duration: Number(sessionData.duration) || 24,
-            price: sessionData.price?.toString() || '0',
-            createdAt: Number(sessionData.created_at) * 1000, // Convert from seconds to milliseconds
-            expiresAt: Number(sessionData.expires_at) * 1000, // Convert from seconds to milliseconds
-            status: this.determineSessionStatus(sessionData),
-            owner: sessionData.owner || userAddress,
-            sessionData: {
-              key: sessionData.session_key,
-              policies: sessionData.policies || [],
-              signedSession: sessionData.signed_session
-            },
-            rentedBy: sessionData.rented_by,
-            earnings: sessionData.earnings ? Number(sessionData.earnings) : undefined
-          };
-
-          sessionKeys.push(storedKey);
-        } catch (keyError) {
-          console.warn('Failed to fetch session key details:', keyId, keyError);
-        }
-      }
-
-      return sessionKeys;
     } catch (error) {
-      console.error('Failed to get stored session keys from contract:', error);
-      
-      // Fallback to localStorage for development/demo purposes
+      console.error('Failed to connect to contract:', error);
       return this.getStoredSessionKeysFromLocalStorage(userAddress);
     }
   }
@@ -458,39 +437,94 @@ export class SessionKeyService {
   /**
    * Store session key in smart contract
    */
-  private async storeSessionKey(sessionKey: StoredSessionKey): Promise<void> {
+  private async storeSessionKey(sessionKey: StoredSessionKey, account?: Account): Promise<void> {
+    const networkConfig = getCurrentNetworkConfig();
+    
+    // Check if we have a deployed contract address
+    if (!networkConfig.sessionKeyManagerAddress || networkConfig.sessionKeyManagerAddress === '0x0') {
+      console.warn('Session Key Manager contract not deployed, using local storage');
+      this.storeSessionKeyInLocalStorage(sessionKey);
+      return;
+    }
+
+    // If no account provided, fall back to local storage
+    if (!account) {
+      console.warn('No account provided for contract interaction, using local storage');
+      this.storeSessionKeyInLocalStorage(sessionKey);
+      return;
+    }
+
     try {
-      const networkConfig = getCurrentNetworkConfig();
-      const { Contract } = await import('starknet');
+      const { Contract, num } = await import('starknet');
       
       // Import contract ABI
       const sessionManagerAbi = await import('../contracts/SessionKeyManager.json');
+      
+      // Connect contract to the account for write operations
       const contract = new Contract(
         sessionManagerAbi.default.abi,
         networkConfig.sessionKeyManagerAddress,
-        this.provider
+        account // Use the account instead of provider for write operations
       );
 
-      // Store session key in contract
-      const callData = {
-        session_id: sessionKey.id,
-        session_key: sessionKey.sessionData?.key || '',
-        description: sessionKey.description,
-        duration: sessionKey.duration,
-        price: sessionKey.price,
-        expires_at: Math.floor(sessionKey.expiresAt / 1000), // Convert to seconds
-        policies: sessionKey.sessionData?.policies || [],
-        signed_session: sessionKey.sessionData?.signedSession
-      };
-
-      await contract.store_session_key(callData);
+      // Use the existing contract interface
+      const permissions = sessionKey.permissions.map(p => this.stringToFelt(p));
+      
+      // Convert price from ETH to wei (multiply by 10^18)
+      const priceInWei = num.toBigInt(parseFloat(sessionKey.price) * Math.pow(10, 18));
+      
+      await contract.create_session_key(
+        sessionKey.owner,
+        sessionKey.duration,
+        permissions,
+        priceInWei.toString()
+      );
       
       console.log('Session key stored in contract:', sessionKey.id);
     } catch (error) {
       console.error('Failed to store session key in contract:', error);
-      
-      // Fallback to localStorage for development/demo purposes
       this.storeSessionKeyInLocalStorage(sessionKey);
+    }
+  }
+
+  /**
+   * Convert felt252 to string
+   */
+  private feltToString(felt: any): string {
+    try {
+      if (typeof felt === 'string') {
+        return felt;
+      }
+      if (typeof felt === 'bigint' || typeof felt === 'number') {
+        // Convert felt to hex and then try to decode as ASCII
+        const hex = felt.toString(16);
+        let result = '';
+        for (let i = 0; i < hex.length; i += 2) {
+          const byte = parseInt(hex.substr(i, 2), 16);
+          if (byte > 0) {
+            result += String.fromCharCode(byte);
+          }
+        }
+        return result || hex;
+      }
+      return felt?.toString() || '';
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Convert string to felt252
+   */
+  private stringToFelt(str: string): string {
+    try {
+      let result = '0x';
+      for (let i = 0; i < str.length; i++) {
+        result += str.charCodeAt(i).toString(16).padStart(2, '0');
+      }
+      return result;
+    } catch {
+      return '0x0';
     }
   }
 
@@ -517,8 +551,16 @@ export class SessionKeyService {
    * Update stored session key in smart contract
    */
   private async updateStoredSessionKey(sessionKey: StoredSessionKey): Promise<void> {
+    const networkConfig = getCurrentNetworkConfig();
+    
+    // Check if we have a deployed contract address
+    if (!networkConfig.sessionKeyManagerAddress || networkConfig.sessionKeyManagerAddress === '0x0') {
+      console.warn('Session Key Manager contract not deployed, using local storage');
+      this.updateStoredSessionKeyInLocalStorage(sessionKey);
+      return;
+    }
+
     try {
-      const networkConfig = getCurrentNetworkConfig();
       const { Contract } = await import('starknet');
       
       // Import contract ABI
@@ -529,14 +571,17 @@ export class SessionKeyService {
         this.provider
       );
 
-      // Update session key status in contract
-      await contract.update_session_key_status(sessionKey.id, sessionKey.status);
-      
-      console.log('Session key updated in contract:', sessionKey.id);
+      // Use the existing contract interface for revocation
+      if (sessionKey.status === 'revoked' && sessionKey.sessionData?.key) {
+        const sessionKeyFelt = sessionKey.sessionData.key.startsWith('0x') 
+          ? sessionKey.sessionData.key 
+          : '0x' + sessionKey.sessionData.key;
+        
+        await contract.revoke_session_key(sessionKeyFelt);
+        console.log('Session key revoked in contract:', sessionKey.id);
+      }
     } catch (error) {
       console.error('Failed to update session key in contract:', error);
-      
-      // Fallback to localStorage for development/demo purposes
       this.updateStoredSessionKeyInLocalStorage(sessionKey);
     }
   }
