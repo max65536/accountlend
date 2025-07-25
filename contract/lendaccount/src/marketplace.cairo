@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait ISessionKeyMarketplace<TContractState> {
+pub trait ISessionKeyMarketplace<TContractState> {
     fn list_session_key(
         ref self: TContractState,
         session_key: felt252,
@@ -41,14 +41,14 @@ trait ISessionKeyMarketplace<TContractState> {
 }
 
 #[derive(Drop, Serde, starknet::Store, Copy)]
-struct ListingInfo {
-    session_key: felt252,
-    owner: ContractAddress,
-    price: u256,
-    is_active: bool,
-    created_at: u64,
-    rented_by: ContractAddress,
-    rented_at: u64,
+pub struct ListingInfo {
+    pub session_key: felt252,
+    pub owner: ContractAddress,
+    pub price: u256,
+    pub is_active: bool,
+    pub created_at: u64,
+    pub rented_by: ContractAddress,
+    pub rented_at: u64,
 }
 
 #[starknet::interface]
@@ -59,7 +59,7 @@ trait IERC20<TContractState> {
 }
 
 #[starknet::contract]
-mod SessionKeyMarketplace {
+pub mod SessionKeyMarketplace {
     use super::{ISessionKeyMarketplace, ListingInfo, IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
     use core::array::ArrayTrait;

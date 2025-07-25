@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 
 #[starknet::interface]
-trait ISessionKeyManager<TContractState> {
+pub trait ISessionKeyManager<TContractState> {
     fn create_session_key(
         ref self: TContractState,
         owner: ContractAddress,
@@ -26,18 +26,18 @@ trait ISessionKeyManager<TContractState> {
 }
 
 #[derive(Drop, Serde, starknet::Store, Copy)]
-struct SessionKeyInfo {
-    owner: ContractAddress,
-    created_at: u64,
-    expires_at: u64,
-    permissions_hash: felt252,
-    price: u256,
-    is_active: bool,
-    rented_by: ContractAddress,
+pub struct SessionKeyInfo {
+    pub owner: ContractAddress,
+    pub created_at: u64,
+    pub expires_at: u64,
+    pub permissions_hash: felt252,
+    pub price: u256,
+    pub is_active: bool,
+    pub rented_by: ContractAddress,
 }
 
 #[starknet::contract]
-mod SessionKeyManager {
+pub mod SessionKeyManager {
     use super::{ISessionKeyManager, SessionKeyInfo};
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp};
     use core::pedersen::pedersen;
