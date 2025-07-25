@@ -1,0 +1,5 @@
+lendaccount_integrationtest::test_basic::test_session_key_manager_revocation
+lendaccount_integrationtest::test_basic::test_multiple_users_session_keys
+lendaccount_integrationtest::test_basic::test_session_key_expiration
+lendaccount_integrationtest::test_basic::test_marketplace_basic
+lendaccount_integrationtest::test_basic::test_session_key_manager_basic
