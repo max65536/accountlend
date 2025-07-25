@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { NetworkSwitcher } from '@/components/NetworkSwitcher';
+import { NetworkWarningBanner } from '@/components/NetworkWarningBanner';
 
 function Home() {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'create' | 'manage' | 'history'>('marketplace');
@@ -101,6 +102,9 @@ function Home() {
             </div>
           </div>
         </header>
+
+        {/* Network Warning Banner */}
+        <NetworkWarningBanner />
 
       {/* Hero Section */}
       <section className="py-20 px-4">

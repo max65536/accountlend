@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Network Detection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .mainnet { background: #fee; color: #c33; border: 1px solid #fcc; }
+        .sepolia { background: #efe; color: #3c3; border: 1px solid #cfc; }
+        .unknown { background: #fef; color: #666; border: 1px solid #ddd; }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Wallet Network Detection Test</h1>
+        <p>This page tests the wallet network detection functionality for AccountLend.</p>
+        
+        <div id="status">
+            <p>📱 <strong>Wallet Status:</strong> <span id="wallet-status">Not connected</span></p>
+            <p>🌐 <strong>Network:</strong> <span id="network-status">Unknown</span></p>
+            <p>🔗 <strong>Chain ID:</strong> <span id="chain-id">-</span></p>
+        </div>
+
+        <div id="warning" class="warning" style="display: none;">
+            <h3>⚠️ Network Mismatch Warning</h3>
+            <p>Your wallet is connected to <strong>Starknet Mainnet</strong>, but AccountLend's contracts are deployed on <strong>Sepolia Testnet</strong>.</p>
+            <p><strong>Please switch to Sepolia testnet in your wallet:</strong></p>
+            <ul>
+                <li><strong>Argent X:</strong> Settings → Network → Sepolia testnet</li>
+                <li><strong>Braavos:</strong> Click network name → Select Sepolia testnet</li>
+            </ul>
+        </div>
+
+        <div>
+            <button onclick="connectWallet()">Connect Wallet</button>
+            <button onclick="detectNetwork()">Detect Network</button>
+            <button onclick="clearLog()">Clear Log</button>
+            <button onclick="testAccountLend()">Test AccountLend</button>
+        </div>
+
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let currentAccount = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function updateStatus(walletStatus, network, chainId) {
+            document.getElementById('wallet-status').textContent = walletStatus;
+            document.getElementById('network-status').textContent = network;
+            document.getElementById('chain-id').textContent = chainId || '-';
+
+            // Update network status styling
+            const networkSpan = document.getElementById('network-status');
+            networkSpan.className = network.toLowerCase();
+
+            // Show/hide warning
+            const warning = document.getElementById('warning');
+            if (network === 'mainnet') {
+                warning.style.display = 'block';
+                log('⚠️ WARNING: Wallet is on mainnet, but AccountLend needs Sepolia testnet');
+            } else {
+                warning.style.display = 'none';
+                if (network === 'sepolia') {
+                    log('✅ SUCCESS: Wallet is on correct network (Sepolia testnet)');
+                }
+            }
+        }
+
+        function detectWalletNetwork(account) {
+            if (!account) {
+                log('❌ No account provided for network detection');
+                return null;
+            }
+
+            try {
+                log('🔍 Detecting wallet network...');
+                log(`📱 Account: ${account.address}`);
+                
+                let chainId = account.chainId;
+                log(`🔗 ChainId: ${chainId} (type: ${typeof chainId})`);
+
+                // Starknet chain IDs
+                const MAINNET_CHAIN_IDS = [
+                    '0x534e5f4d41494e', // SN_MAIN (hex string)
+                    'SN_MAIN', // String format
+                    '23448594291968334', // Decimal format
+                    23448594291968334 // Number format
+                ];
+                
+                const SEPOLIA_CHAIN_IDS = [
+                    '0x534e5f5345504f4c4941', // SN_SEPOLIA (hex string)
+                    'SN_SEPOLIA', // String format
+                    '1536727068981429685321', // Decimal format
+                    1536727068981429685321 // Number format
+                ];
+
+                const chainIdStr = String(chainId);
+                const chainIdNum = typeof chainId === 'string' ? parseInt(chainId, 16) : Number(chainId);
+
+                log(`🔍 Comparing: str="${chainIdStr}", num=${chainIdNum}`);
+
+                // Check for mainnet
+                if (MAINNET_CHAIN_IDS.some(id => 
+                    String(id) === chainIdStr || 
+                    id === chainId || 
+                    (typeof id === 'number' && id === chainIdNum)
+                )) {
+                    log('✅ Detected: MAINNET');
+                    return 'mainnet';
+                }
+                
+                // Check for sepolia
+                if (SEPOLIA_CHAIN_IDS.some(id => 
+                    String(id) === chainIdStr || 
+                    id === chainId || 
+                    (typeof id === 'number' && id === chainIdNum)
+                )) {
+                    log('✅ Detected: SEPOLIA');
+                    return 'sepolia';
+                }
+                
+                log('❓ Detected: UNKNOWN network');
+                return 'unknown';
+            } catch (error) {
+                log(`❌ Network detection error: ${error.message}`);
+                return null;
+            }
+        }
+
+        async function connectWallet() {
+            try {
+                log('🔌 Connecting wallet...');
+                
+                // Check if starknet is available
+                if (typeof window.starknet === 'undefined') {
+                    log('❌ Starknet wallet not found. Please install Argent X or Braavos.');
+                    alert('Please install Argent X or Braavos wallet extension.');
+                    return;
+                }
+
+                // Enable wallet connection
+                await window.starknet.enable();
+                
+                if (window.starknet.isConnected) {
+                    currentAccount = window.starknet.account;
+                    log(`✅ Wallet connected: ${currentAccount.address}`);
+                    
+                    // Detect network
+                    const network = detectWalletNetwork(currentAccount);
+                    updateStatus('Connected', network || 'Unknown', currentAccount.chainId);
+                } else {
+                    log('❌ Wallet connection failed');
+                    updateStatus('Connection failed', 'Unknown', null);
+                }
+            } catch (error) {
+                log(`❌ Wallet connection error: ${error.message}`);
+                updateStatus('Error', 'Unknown', null);
+            }
+        }
+
+        async function detectNetwork() {
+            if (!currentAccount) {
+                log('❌ No wallet connected. Please connect wallet first.');
+                return;
+            }
+
+            const network = detectWalletNetwork(currentAccount);
+            updateStatus('Connected', network || 'Unknown', currentAccount.chainId);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function testAccountLend() {
+            log('🚀 Testing AccountLend integration...');
+            log('📍 AccountLend URL: http://localhost:3003');
+            log('🔧 Expected behavior:');
+            log('  - If wallet on mainnet: Show amber warning banner');
+            log('  - If wallet on sepolia: Show green status, no warning');
+            log('  - Network switcher should show current wallet network');
+            
+            // Open AccountLend in new tab
+            window.open('http://localhost:3003', '_blank');
+        }
+
+        // Auto-detect if wallet is already connected
+        window.addEventListener('load', async () => {
+            log('🚀 Page loaded, checking for existing wallet connection...');
+            
+            if (typeof window.starknet !== 'undefined' && window.starknet.isConnected) {
+                currentAccount = window.starknet.account;
+                log(`🔌 Found existing connection: ${currentAccount.address}`);
+                
+                const network = detectWalletNetwork(currentAccount);
+                updateStatus('Connected', network || 'Unknown', currentAccount.chainId);
+            } else {
+                log('📱 No existing wallet connection found');
+            }
+        });
+
+        // Listen for account changes
+        if (typeof window.starknet !== 'undefined') {
+            window.starknet.on('accountsChanged', (accounts) => {
+                log('🔄 Account changed event detected');
+                if (accounts.length > 0) {
+                    currentAccount = window.starknet.account;
+                    const network = detectWalletNetwork(currentAccount);
+                    updateStatus('Connected', network || 'Unknown', currentAccount.chainId);
+                } else {
+                    currentAccount = null;
+                    updateStatus('Disconnected', 'Unknown', null);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
