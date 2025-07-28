@@ -8,6 +8,13 @@ pub trait ISessionKeyMarketplace<TContractState> {
         price: u256
     );
     
+    fn list_session_key_for_owner(
+        ref self: TContractState,
+        session_key: felt252,
+        owner: ContractAddress,
+        price: u256
+    );
+    
     fn rent_session_key(
         ref self: TContractState,
         session_key: felt252
@@ -170,6 +177,43 @@ pub mod SessionKeyMarketplace {
             self.emit(SessionKeyListed {
                 session_key,
                 owner: caller,
+                price,
+            });
+        }
+
+        fn list_session_key_for_owner(
+            ref self: ContractState,
+            session_key: felt252,
+            owner: ContractAddress,
+            price: u256
+        ) {
+            let caller = get_caller_address();
+            let current_time = get_block_timestamp();
+            let session_key_manager = self.session_key_manager.read();
+            
+            // Only allow the SessionKeyManager contract to call this function
+            assert(caller == session_key_manager, 'Only SessionKeyManager can call');
+            
+            let listing = ListingInfo {
+                session_key,
+                owner,
+                price,
+                is_active: true,
+                created_at: current_time,
+                rented_by: starknet::contract_address_const::<0>(),
+                rented_at: 0,
+            };
+            
+            self.listings.write(session_key, listing);
+            
+            // Add to active listings
+            let count = self.active_listings_count.read();
+            self.active_listings.write(count, session_key);
+            self.active_listings_count.write(count + 1);
+            
+            self.emit(SessionKeyListed {
+                session_key,
+                owner,
                 price,
             });
         }

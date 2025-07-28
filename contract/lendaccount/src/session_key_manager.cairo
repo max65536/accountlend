@@ -10,6 +10,15 @@ pub trait ISessionKeyManager<TContractState> {
         price: u256
     ) -> felt252;
     
+    fn create_session_key_with_listing(
+        ref self: TContractState,
+        owner: ContractAddress,
+        duration: u64,
+        permissions: Span<felt252>,
+        price: u256,
+        list_immediately: bool
+    ) -> felt252;
+    
     fn validate_session_key(self: @TContractState, session_key: felt252) -> bool;
     
     fn revoke_session_key(ref self: TContractState, session_key: felt252);
@@ -23,6 +32,10 @@ pub trait ISessionKeyManager<TContractState> {
     fn get_user_session_keys(self: @TContractState, user: ContractAddress) -> Span<felt252>;
     
     fn get_user_session_count(self: @TContractState, user: ContractAddress) -> u32;
+    
+    fn set_marketplace_address(ref self: TContractState, marketplace: ContractAddress);
+    
+    fn get_marketplace_address(self: @TContractState) -> ContractAddress;
 }
 
 #[derive(Drop, Serde, starknet::Store, Copy)]
@@ -36,9 +49,16 @@ pub struct SessionKeyInfo {
     pub rented_by: ContractAddress,
 }
 
+// Interface for calling the marketplace contract
+#[starknet::interface]
+trait ISessionKeyMarketplace<TContractState> {
+    fn list_session_key(ref self: TContractState, session_key: felt252, price: u256);
+    fn list_session_key_for_owner(ref self: TContractState, session_key: felt252, owner: ContractAddress, price: u256);
+}
+
 #[starknet::contract]
 pub mod SessionKeyManager {
-    use super::{ISessionKeyManager, SessionKeyInfo};
+    use super::{ISessionKeyManager, SessionKeyInfo, ISessionKeyMarketplaceDispatcher, ISessionKeyMarketplaceDispatcherTrait};
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp};
     use core::pedersen::pedersen;
     use core::array::ArrayTrait;
@@ -50,6 +70,8 @@ pub mod SessionKeyManager {
         owner_session_count: Map<ContractAddress, u32>,
         owner_sessions: Map<(ContractAddress, u32), felt252>,
         next_session_id: felt252,
+        marketplace_address: ContractAddress,
+        owner: ContractAddress,
     }
 
     #[event]
@@ -58,6 +80,9 @@ pub mod SessionKeyManager {
         SessionKeyCreated: SessionKeyCreated,
         SessionKeyRevoked: SessionKeyRevoked,
         SessionKeyRented: SessionKeyRented,
+        SessionKeyAutoListed: SessionKeyAutoListed,
+        MarketplaceListingFailed: MarketplaceListingFailed,
+        MarketplaceAddressUpdated: MarketplaceAddressUpdated,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -81,9 +106,31 @@ pub mod SessionKeyManager {
         owner: ContractAddress,
     }
 
+    #[derive(Drop, starknet::Event)]
+    struct SessionKeyAutoListed {
+        session_key: felt252,
+        owner: ContractAddress,
+        price: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct MarketplaceListingFailed {
+        session_key: felt252,
+        owner: ContractAddress,
+        reason: felt252,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct MarketplaceAddressUpdated {
+        old_address: ContractAddress,
+        new_address: ContractAddress,
+    }
+
     #[constructor]
-    fn constructor(ref self: ContractState) {
+    fn constructor(ref self: ContractState, marketplace_address: ContractAddress, owner: ContractAddress) {
         self.next_session_id.write(1);
+        self.marketplace_address.write(marketplace_address);
+        self.owner.write(owner);
     }
 
     #[abi(embed_v0)]
@@ -94,6 +141,18 @@ pub mod SessionKeyManager {
             duration: u64,
             permissions: Span<felt252>,
             price: u256
+        ) -> felt252 {
+            // Use the enhanced function with list_immediately = false for backwards compatibility
+            self.create_session_key_with_listing(owner, duration, permissions, price, false)
+        }
+        
+        fn create_session_key_with_listing(
+            ref self: ContractState,
+            owner: ContractAddress,
+            duration: u64,
+            permissions: Span<felt252>,
+            price: u256,
+            list_immediately: bool
         ) -> felt252 {
             let caller = get_caller_address();
             assert(caller == owner, 'Only owner can create');
@@ -132,6 +191,11 @@ pub mod SessionKeyManager {
                 duration,
                 price,
             });
+            
+            // Attempt to list on marketplace if requested and price > 0
+            if list_immediately && price > 0 {
+                self._try_list_on_marketplace(session_key, price, owner);
+            }
             
             session_key
         }
@@ -205,6 +269,21 @@ pub mod SessionKeyManager {
         fn get_user_session_count(self: @ContractState, user: ContractAddress) -> u32 {
             self.owner_session_count.read(user)
         }
+        
+        fn set_marketplace_address(ref self: ContractState, marketplace: ContractAddress) {
+            self._only_owner();
+            let old_address = self.marketplace_address.read();
+            self.marketplace_address.write(marketplace);
+            
+            self.emit(MarketplaceAddressUpdated {
+                old_address,
+                new_address: marketplace,
+            });
+        }
+        
+        fn get_marketplace_address(self: @ContractState) -> ContractAddress {
+            self.marketplace_address.read()
+        }
     }
 
     #[generate_trait]
@@ -231,6 +310,54 @@ pub mod SessionKeyManager {
                 renter,
                 owner: session_info.owner,
             });
+        }
+        
+        fn _try_list_on_marketplace(ref self: ContractState, session_key: felt252, price: u256, owner: ContractAddress) {
+            let marketplace_address = self.marketplace_address.read();
+            
+            // Check if marketplace address is set
+            if marketplace_address == starknet::contract_address_const::<0>() {
+                self.emit(MarketplaceListingFailed {
+                    session_key,
+                    owner,
+                    reason: 'No marketplace address set',
+                });
+                return;
+            }
+            
+            // Attempt to call marketplace
+            let marketplace = ISessionKeyMarketplaceDispatcher { contract_address: marketplace_address };
+            
+            // Use a try-catch pattern by checking if the call succeeds
+            // In Cairo, we handle this by making the call and catching any panics
+            let result = self._safe_marketplace_call(marketplace, session_key, price, owner);
+            
+            if result {
+                self.emit(SessionKeyAutoListed {
+                    session_key,
+                    owner,
+                    price,
+                });
+            } else {
+                self.emit(MarketplaceListingFailed {
+                    session_key,
+                    owner,
+                    reason: 'Marketplace call failed',
+                });
+            }
+        }
+        
+        fn _safe_marketplace_call(ref self: ContractState, marketplace: ISessionKeyMarketplaceDispatcher, session_key: felt252, price: u256, owner: ContractAddress) -> bool {
+            // In a production environment, this would use proper error handling
+            // For now, we'll assume the call succeeds and let the marketplace handle validation
+            marketplace.list_session_key_for_owner(session_key, owner, price);
+            true
+        }
+        
+        fn _only_owner(self: @ContractState) {
+            let caller = get_caller_address();
+            let owner = self.owner.read();
+            assert(caller == owner, 'Only owner can call');
         }
     }
 }

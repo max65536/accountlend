@@ -2,8 +2,8 @@
 export const CONTRACT_ADDRESSES = {
   // Starknet Testnet (Sepolia)
   testnet: {
-    ACCOUNT_MARKET: "0x03f36ddcaadfe884c10932569e2145ffeb36624f999e18dbb201f9d52777eeab", // SessionKeyMarketplace deployed - Updated 2025-01-25
-    SESSION_KEY_MANAGER: "0x01009de25860556a49b0a45a35e4938e441b07fe658101874b08100384d5cb3e", // SessionKeyManager deployed - Updated 2025-01-25
+    ACCOUNT_MARKET: "0x008957aefd5fbc095ef5685b4c3779c15a388634f88f629bf1ea8090b8517383", // SessionKeyMarketplace with fixed owner attribution - Updated 2025-01-28
+    SESSION_KEY_MANAGER: "0x05053e21d88a77300f7f164d4be4defbd4aeed79367b8c6817a517579042a9dd", // Enhanced SessionKeyManager with working auto-listing - Updated 2025-01-28
     ERC20_ETH: "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", // ETH on testnet
   },
   // Starknet Mainnet

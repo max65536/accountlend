@@ -1,165 +1,454 @@
 {
   "abi": [
     {
-      "type": "function",
-      "name": "create_session_key",
-      "inputs": [
-        {
-          "name": "owner",
-          "type": "core::starknet::contract_address::ContractAddress"
-        },
-        {
-          "name": "duration",
-          "type": "core::integer::u64"
-        },
-        {
-          "name": "permissions",
-          "type": "core::array::Array::<core::felt252>"
-        },
-        {
-          "name": "price",
-          "type": "core::integer::u256"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "core::felt252"
-        }
-      ],
-      "state_mutability": "external"
+      "type": "impl",
+      "name": "SessionKeyManagerImpl",
+      "interface_name": "lendaccount::session_key_manager::ISessionKeyManager"
     },
     {
-      "type": "function",
-      "name": "validate_session_key",
-      "inputs": [
+      "type": "struct",
+      "name": "core::array::Span::<core::felt252>",
+      "members": [
         {
-          "name": "session_key",
-          "type": "core::felt252"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "core::bool"
-        }
-      ],
-      "state_mutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "revoke_session_key",
-      "inputs": [
-        {
-          "name": "session_key",
-          "type": "core::felt252"
-        }
-      ],
-      "outputs": [],
-      "state_mutability": "external"
-    },
-    {
-      "type": "function",
-      "name": "get_session_key_info",
-      "inputs": [
-        {
-          "name": "session_key",
-          "type": "core::felt252"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "lendaccount::lib::SessionKeyInfo"
-        }
-      ],
-      "state_mutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "is_session_expired",
-      "inputs": [
-        {
-          "name": "session_key",
-          "type": "core::felt252"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "core::bool"
-        }
-      ],
-      "state_mutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "get_session_permissions",
-      "inputs": [
-        {
-          "name": "session_key",
-          "type": "core::felt252"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "core::array::Array::<core::felt252>"
-        }
-      ],
-      "state_mutability": "view"
-    }
-  ],
-  "events": [
-    {
-      "type": "event",
-      "name": "SessionKeyCreated",
-      "keys": [],
-      "data": [
-        {
-          "name": "session_key",
-          "type": "core::felt252"
-        },
-        {
-          "name": "owner",
-          "type": "core::starknet::contract_address::ContractAddress"
-        },
-        {
-          "name": "duration",
-          "type": "core::integer::u64"
-        },
-        {
-          "name": "price",
-          "type": "core::integer::u256"
+          "name": "snapshot",
+          "type": "@core::array::Array::<core::felt252>"
         }
       ]
     },
     {
-      "type": "event",
-      "name": "SessionKeyRevoked",
-      "keys": [],
-      "data": [
+      "type": "struct",
+      "name": "core::integer::u256",
+      "members": [
         {
-          "name": "session_key",
+          "name": "low",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "high",
+          "type": "core::integer::u128"
+        }
+      ]
+    },
+    {
+      "type": "enum",
+      "name": "core::bool",
+      "variants": [
+        {
+          "name": "False",
+          "type": "()"
+        },
+        {
+          "name": "True",
+          "type": "()"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "lendaccount::session_key_manager::SessionKeyInfo",
+      "members": [
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "created_at",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "expires_at",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "permissions_hash",
           "type": "core::felt252"
         },
         {
-          "name": "owner",
+          "name": "price",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "is_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "rented_by",
           "type": "core::starknet::contract_address::ContractAddress"
         }
       ]
     },
     {
+      "type": "interface",
+      "name": "lendaccount::session_key_manager::ISessionKeyManager",
+      "items": [
+        {
+          "type": "function",
+          "name": "create_session_key",
+          "inputs": [
+            {
+              "name": "owner",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "duration",
+              "type": "core::integer::u64"
+            },
+            {
+              "name": "permissions",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "price",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::felt252"
+            }
+          ],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "create_session_key_with_listing",
+          "inputs": [
+            {
+              "name": "owner",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "duration",
+              "type": "core::integer::u64"
+            },
+            {
+              "name": "permissions",
+              "type": "core::array::Span::<core::felt252>"
+            },
+            {
+              "name": "price",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "list_immediately",
+              "type": "core::bool"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::felt252"
+            }
+          ],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "validate_session_key",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::bool"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "revoke_session_key",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "get_session_key_info",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "lendaccount::session_key_manager::SessionKeyInfo"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "is_session_expired",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::bool"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "get_session_permissions",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::array::Span::<core::felt252>"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "get_user_session_keys",
+          "inputs": [
+            {
+              "name": "user",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::array::Span::<core::felt252>"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "get_user_session_count",
+          "inputs": [
+            {
+              "name": "user",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u32"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "set_marketplace_address",
+          "inputs": [
+            {
+              "name": "marketplace",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "get_marketplace_address",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "state_mutability": "view"
+        }
+      ]
+    },
+    {
+      "type": "constructor",
+      "name": "constructor",
+      "inputs": [
+        {
+          "name": "marketplace_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
+        }
+      ]
+    },
+    {
       "type": "event",
-      "name": "SessionKeyRented",
-      "keys": [],
-      "data": [
+      "name": "lendaccount::session_key_manager::SessionKeyManager::SessionKeyCreated",
+      "kind": "struct",
+      "members": [
         {
           "name": "session_key",
-          "type": "core::felt252"
+          "type": "core::felt252",
+          "kind": "data"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        },
+        {
+          "name": "duration",
+          "type": "core::integer::u64",
+          "kind": "data"
+        },
+        {
+          "name": "price",
+          "type": "core::integer::u256",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "lendaccount::session_key_manager::SessionKeyManager::SessionKeyRevoked",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "session_key",
+          "type": "core::felt252",
+          "kind": "data"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "lendaccount::session_key_manager::SessionKeyManager::SessionKeyRented",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "session_key",
+          "type": "core::felt252",
+          "kind": "data"
         },
         {
           "name": "renter",
-          "type": "core::starknet::contract_address::ContractAddress"
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
         },
         {
           "name": "owner",
-          "type": "core::starknet::contract_address::ContractAddress"
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "lendaccount::session_key_manager::SessionKeyManager::SessionKeyAutoListed",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "session_key",
+          "type": "core::felt252",
+          "kind": "data"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        },
+        {
+          "name": "price",
+          "type": "core::integer::u256",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "lendaccount::session_key_manager::SessionKeyManager::MarketplaceListingFailed",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "session_key",
+          "type": "core::felt252",
+          "kind": "data"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        },
+        {
+          "name": "reason",
+          "type": "core::felt252",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "lendaccount::session_key_manager::SessionKeyManager::MarketplaceAddressUpdated",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "old_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        },
+        {
+          "name": "new_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "lendaccount::session_key_manager::SessionKeyManager::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "SessionKeyCreated",
+          "type": "lendaccount::session_key_manager::SessionKeyManager::SessionKeyCreated",
+          "kind": "nested"
+        },
+        {
+          "name": "SessionKeyRevoked",
+          "type": "lendaccount::session_key_manager::SessionKeyManager::SessionKeyRevoked",
+          "kind": "nested"
+        },
+        {
+          "name": "SessionKeyRented",
+          "type": "lendaccount::session_key_manager::SessionKeyManager::SessionKeyRented",
+          "kind": "nested"
+        },
+        {
+          "name": "SessionKeyAutoListed",
+          "type": "lendaccount::session_key_manager::SessionKeyManager::SessionKeyAutoListed",
+          "kind": "nested"
+        },
+        {
+          "name": "MarketplaceListingFailed",
+          "type": "lendaccount::session_key_manager::SessionKeyManager::MarketplaceListingFailed",
+          "kind": "nested"
+        },
+        {
+          "name": "MarketplaceAddressUpdated",
+          "type": "lendaccount::session_key_manager::SessionKeyManager::MarketplaceAddressUpdated",
+          "kind": "nested"
         }
       ]
     }

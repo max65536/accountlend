@@ -181,7 +181,8 @@ export class SessionKeyService {
     duration: number, // in hours
     permissions: string[],
     price: string,
-    description: string
+    description: string,
+    autoList: boolean = true // Enable auto-listing by default
   ): Promise<{ sessionKey: StoredSessionKey; transactionHash?: string }> {
     try {
       // Convert duration from hours to milliseconds for expiry
@@ -262,7 +263,7 @@ export class SessionKeyService {
       }
 
       // Store session key locally and in contract - get the real transaction hash
-      const transactionHash = await this.storeSessionKey(storedSessionKey, account);
+      const transactionHash = await this.storeSessionKey(storedSessionKey, account, autoList);
 
       return { 
         sessionKey: storedSessionKey, 
@@ -440,7 +441,7 @@ export class SessionKeyService {
   /**
    * Store session key in smart contract
    */
-  private async storeSessionKey(sessionKey: StoredSessionKey, account?: Account): Promise<string | null> {
+  private async storeSessionKey(sessionKey: StoredSessionKey, account?: Account, autoList: boolean = true): Promise<string | null> {
     const networkConfig = getCurrentNetworkConfig();
     
     // Check if we have a deployed contract address
@@ -476,12 +477,13 @@ export class SessionKeyService {
       // Convert price from ETH to wei (multiply by 10^18)
       const priceInWei = num.toBigInt(parseFloat(sessionKey.price) * Math.pow(10, 18));
       
-      console.log('🚀 Calling contract.create_session_key...');
-      const result = await contract.create_session_key(
+      console.log('🚀 Calling contract.create_session_key_with_listing...');
+      const result = await contract.create_session_key_with_listing(
         sessionKey.owner,
         sessionKey.duration,
         permissions,
-        priceInWei.toString()
+        priceInWei.toString(),
+        autoList  // Pass boolean directly as the ABI expects core::bool
       );
       
       console.log('✅ Contract call result:', result);

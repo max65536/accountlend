@@ -35,7 +35,7 @@ interface SessionKeyListing {
     permissions: string[];
     description?: string;
     duration?: string;
-    type: 'available' | 'owned' | 'rented';
+    type: 'available' | 'owned' | 'rented' | 'unlisted';
 }
 
 interface Task {
@@ -127,101 +127,171 @@ export default function AccountMarket() {
         },
     ]);
 
-    // Load listings from blockchain event service
+    // Load listings from both SessionKeyManager and SessionKeyMarketplace contracts
     const loadListings = async () => {
-        if (!account.account) return;
-        
         setIsLoading(true);
         setError(null);
         
         try {
-            // Check contract health first
-            const contractHealth = await blockchainEventService.checkContractHealth();
+            // Create a read-only provider for contract calls
+            const { RpcProvider } = await import('starknet');
+            const provider = new RpcProvider({ nodeUrl: 'https://starknet-sepolia.public.blastapi.io' });
             
-            if (contractHealth.sessionKeyManager && contractHealth.sessionKeyMarketplace) {
-                // Try to fetch from blockchain event service
-                const marketplaceListings = await blockchainEventService.getActiveMarketplaceListings();
+            const allListings: SessionKeyListing[] = [];
+            
+            // 1. Get active listings from marketplace contract (already listed for rent)
+            try {
+                const marketplaceCall = await provider.callContract({
+                    contractAddress: '0x03f36ddcaadfe884c10932569e2145ffeb36624f999e18dbb201f9d52777eeab',
+                    entrypoint: 'get_active_listings',
+                    calldata: ['0x0', '0xa'] // offset: 0, limit: 10
+                });
                 
-                if (marketplaceListings.length > 0) {
-                    const convertedListings: SessionKeyListing[] = marketplaceListings.map(listing => ({
-                        sessionKey: listing.sessionKeyId,
-                        owner: listing.owner,
-                        price: listing.price,
-                        isActive: listing.isActive,
-                        createdAt: listing.createdAt,
-                        expiresAt: listing.expiresAt,
-                        permissions: listing.permissions,
-                        description: listing.description,
-                        duration: `${Math.floor((listing.expiresAt - Date.now()) / (1000 * 3600))} hours remaining`,
-                        type: listing.owner === account.address ? 'owned' : 'available'
-                    }));
+                console.log('Raw marketplace call result:', marketplaceCall);
+                
+                if (marketplaceCall.result && marketplaceCall.result.length > 0) {
+                    const validSessionKeys = marketplaceCall.result.filter(key => key !== '0x0' && key !== '0');
                     
-                    setListings(convertedListings);
-                    setUseMockData(false);
-                    setDivContent(`Loaded ${convertedListings.length} session keys from blockchain`);
-                } else {
-                    // No listings found, but contracts are working
-                    setListings([]);
-                    setUseMockData(false);
-                    setDivContent('No active session keys found on the marketplace');
-                }
-            } else {
-                // Fallback to old contract method
-                const activeListings = await getActiveListings(account.account as Account, 0, 20);
-                
-                if (activeListings.length > 0) {
-                    const listingsWithDetails = await Promise.all(
-                        activeListings.map(async (sessionKey: string) => {
+                    const marketplaceListings = await Promise.all(
+                        validSessionKeys.map(async (sessionKey: string) => {
                             try {
-                                const info = await getSessionKeyInfo(account.account as Account, sessionKey);
-                                const currentTime = Math.floor(Date.now() / 1000);
+                                const listingInfoCall = await provider.callContract({
+                                    contractAddress: '0x03f36ddcaadfe884c10932569e2145ffeb36624f999e18dbb201f9d52777eeab',
+                                    entrypoint: 'get_listing_info',
+                                    calldata: [sessionKey]
+                                });
                                 
-                                return {
-                                    sessionKey,
-                                    owner: info.owner,
-                                    price: formatWeiToEth(info.price.toString()),
-                                    isActive: info.is_active && currentTime < info.expires_at,
-                                    createdAt: info.created_at,
-                                    expiresAt: info.expires_at,
-                                    permissions: parsePermissions(info.permissions || []),
-                                    description: `Session key with ${parsePermissions(info.permissions || []).join(', ')} permissions`,
-                                    duration: `${Math.floor((info.expires_at - currentTime) / 3600)} hours remaining`,
-                                    type: info.owner === account.address ? 'owned' : 'available'
-                                } as SessionKeyListing;
+                                const [sessionKeyResult, owner, priceLow, priceHigh, isActive, createdAt, rentedBy, rentedAt] = listingInfoCall.result;
+                                const priceWei = BigInt(priceLow) + (BigInt(priceHigh) << BigInt(128));
+                                const priceEth = Number(priceWei) / 1e18;
+                                
+                                if (parseInt(isActive, 16) === 1 && priceWei > BigInt(0)) {
+                                    return {
+                                        sessionKey: sessionKeyResult,
+                                        owner: owner,
+                                        price: priceEth.toFixed(6),
+                                        isActive: true,
+                                        createdAt: parseInt(createdAt, 16),
+                                        expiresAt: parseInt(createdAt, 16) + 86400,
+                                        permissions: ['Transfer', 'Approve'],
+                                        description: `Listed session key from ${owner.slice(0, 8)}...`,
+                                        duration: '24 hours',
+                                        type: (account.address && owner === account.address) ? 'owned' : 'available'
+                                    } as SessionKeyListing;
+                                }
+                                return null;
                             } catch (err) {
-                                console.error('Failed to get session key info:', err);
+                                console.error(`Failed to get listing info for ${sessionKey}:`, err);
                                 return null;
                             }
                         })
                     );
                     
-                    const validListings = listingsWithDetails.filter(listing => listing !== null) as SessionKeyListing[];
-                    setListings(validListings);
-                    setUseMockData(false);
-                    setDivContent(`Loaded ${validListings.length} session keys from contracts`);
-                } else {
-                    setListings([]);
-                    setUseMockData(false);
-                    setDivContent('No active session keys found');
+                    const validMarketplaceListings = marketplaceListings.filter(listing => listing !== null) as SessionKeyListing[];
+                    allListings.push(...validMarketplaceListings);
                 }
+            } catch (err) {
+                console.error('Failed to load marketplace listings:', err);
             }
+            
+            // 2. Get session keys from SessionKeyManager contract (created but not yet listed)
+            try {
+                // First, get the total count of users who have session keys
+                // For now, we'll try to get session keys for a specific user if wallet is connected
+                // or try to get session keys for the deployer account as an example
+                const testUserAddress = account.address || '0x0452183071ba5cb3fe2691ffa5541915262b15dc8cdbce3ac5175344f31f8b31';
+                
+                const sessionManagerCall = await provider.callContract({
+                    contractAddress: '0x0511dd4048011bbe996cf0142796d66bbcf47ab769fb61a11f5e66172cac0e39',
+                    entrypoint: 'get_user_session_keys',
+                    calldata: [testUserAddress]
+                });
+                
+                console.log('SessionKeyManager call result:', sessionManagerCall);
+                
+                if (sessionManagerCall.result && sessionManagerCall.result.length > 0) {
+                    const validSessionKeys = sessionManagerCall.result.filter(key => key !== '0x0' && key !== '0');
+                    
+                    const sessionManagerListings = await Promise.all(
+                        validSessionKeys.map(async (sessionKey: string) => {
+                            try {
+                                // Check if this session key is already listed in marketplace
+                                const alreadyListed = allListings.some(listing => listing.sessionKey === sessionKey);
+                                if (alreadyListed) return null;
+                                
+                                // Get session key info from SessionKeyManager
+                                const sessionInfoCall = await provider.callContract({
+                                    contractAddress: '0x0511dd4048011bbe996cf0142796d66bbcf47ab769fb61a11f5e66172cac0e39',
+                                    entrypoint: 'get_session_key_info',
+                                    calldata: [sessionKey]
+                                });
+                                
+                                console.log(`Session key info for ${sessionKey}:`, sessionInfoCall);
+                                
+                                // Parse SessionKeyInfo struct: owner, created_at, expires_at, permissions_hash, price, is_active, rented_by
+                                const [owner, createdAt, expiresAt, permissionsHash, priceLow, priceHigh, isActive, rentedBy] = sessionInfoCall.result;
+                                
+                                if (parseInt(isActive, 16) === 1) {
+                                    // Convert price from u256 (low, high) to readable format
+                                    const priceWei = BigInt(priceLow) + (BigInt(priceHigh) << BigInt(128));
+                                    const priceEth = Number(priceWei) / 1e18;
+                                    
+                                    return {
+                                        sessionKey: sessionKey,
+                                        owner: owner,
+                                        price: priceEth > 0 ? priceEth.toFixed(6) : '0.000000',
+                                        isActive: true,
+                                        createdAt: parseInt(createdAt, 16),
+                                        expiresAt: parseInt(expiresAt, 16),
+                                        permissions: ['Transfer', 'Approve'], // Default permissions
+                                        description: `Session key from ${owner.slice(0, 8)}... ${priceEth > 0 ? '(Ready to list)' : '(Not listed yet)'}`,
+                                        duration: `${Math.floor((parseInt(expiresAt, 16) - Date.now() / 1000) / 3600)} hours remaining`,
+                                        type: (account.address && owner === account.address) ? 'owned' : 'unlisted'
+                                    } as SessionKeyListing;
+                                }
+                                return null;
+                            } catch (err) {
+                                console.error(`Failed to get session key info for ${sessionKey}:`, err);
+                                return null;
+                            }
+                        })
+                    );
+                    
+                    const validSessionManagerListings = sessionManagerListings.filter(listing => listing !== null) as SessionKeyListing[];
+                    allListings.push(...validSessionManagerListings);
+                }
+            } catch (err) {
+                console.error('Failed to load session keys from SessionKeyManager:', err);
+            }
+            
+            // Update state with all listings
+            if (allListings.length > 0) {
+                setListings(allListings);
+                setUseMockData(false);
+                const listedCount = allListings.filter(l => l.type === 'available' || l.type === 'owned').length;
+                const unlistedCount = allListings.filter(l => l.type === 'unlisted').length;
+                setDivContent(`Loaded ${allListings.length} session keys (${listedCount} listed, ${unlistedCount} unlisted)`);
+            } else {
+                setListings([]);
+                setUseMockData(false);
+                setDivContent('No session keys found in contracts');
+            }
+            
         } catch (err) {
-            console.error('Failed to load listings:', err);
+            console.error('Failed to load listings from contracts:', err);
             const errorMessage = handleContractError(err);
             setError(errorMessage);
             setUseMockData(true);
-            setDivContent(`Using mock data: ${errorMessage}`);
+            setDivContent(`Failed to load from contracts, using mock data: ${errorMessage}`);
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Load listings on component mount and account change
+    // Load listings on component mount
     useEffect(() => {
-        if (account.account) {
-            loadListings();
-        }
-    }, [account.account]);
+        loadListings();
+    }, [account.address]); // Reload when account changes
 
     const acceptTask = (task: Task) => {
         console.log('Processing task', task);
@@ -435,144 +505,8 @@ export default function AccountMarket() {
         }
     }, [account.address]);
 
-    if (!account.address) {
-        return (
-            <div className="space-y-6">
-                {/* Demo Banner */}
-                <div className="text-center py-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                    <Shield className="w-16 h-16 text-blue-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">Session Key Marketplace Demo</h3>
-                    <p className="text-gray-600 mb-4">
-                        Explore the marketplace with sample data. Connect your wallet for full functionality.
-                    </p>
-                    <Badge variant="outline" className="bg-white">
-                        Demo Mode - Sample Data
-                    </Badge>
-                </div>
-
-                {/* Demo Stats */}
-                {testData?.stats && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center p-4 bg-white rounded-lg border">
-                            <div className="text-2xl font-bold text-blue-600">{testData.stats.activeListings}</div>
-                            <div className="text-sm text-gray-600">Active Listings</div>
-                        </div>
-                        <div className="text-center p-4 bg-white rounded-lg border">
-                            <div className="text-2xl font-bold text-green-600">{testData.stats.totalVolume} ETH</div>
-                            <div className="text-sm text-gray-600">Total Volume</div>
-                        </div>
-                        <div className="text-center p-4 bg-white rounded-lg border">
-                            <div className="text-2xl font-bold text-purple-600">{testData.stats.categories.length}</div>
-                            <div className="text-sm text-gray-600">Categories</div>
-                        </div>
-                        <div className="text-center p-4 bg-white rounded-lg border">
-                            <div className="text-2xl font-bold text-orange-600">{testData.stats.averagePrice} ETH</div>
-                            <div className="text-sm text-gray-600">Avg Price</div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Demo Session Keys */}
-                <div>
-                    <h3 className="text-lg font-semibold mb-4">Available Session Keys</h3>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {testData?.listings?.map((listing: any, index: number) => {
-                            const typeInfo = getTaskTypeInfo('buy');
-                            const IconComponent = typeInfo.icon;
-
-                            return (
-                                <Card key={listing.sessionKey} className="hover:shadow-lg transition-shadow border-2 border-dashed border-gray-200">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-start justify-between">
-                                            <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700">
-                                                <IconComponent className="w-3 h-3" />
-                                                Demo Listing
-                                            </Badge>
-                                            <div className="text-right">
-                                                <div className="text-lg font-bold text-gray-900">
-                                                    {listing.price} ETH
-                                                </div>
-                                                <div className="text-xs text-gray-500">
-                                                    {listing.duration}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <CardTitle className="text-base line-clamp-2">
-                                            {listing.description}
-                                        </CardTitle>
-                                    </CardHeader>
-                                    
-                                    <CardContent className="space-y-4">
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                <User className="w-4 h-4" />
-                                                <span>From: {listing.owner.slice(0, 8)}...</span>
-                                            </div>
-                                            
-                                            {listing.permissions && (
-                                                <div className="flex flex-wrap gap-1">
-                                                    {listing.permissions.map((permission: string, permIndex: number) => (
-                                                        <Badge key={permIndex} variant="outline" className="text-xs">
-                                                            {permission}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            )}
-
-                                            {listing.category && (
-                                                <div className="flex items-center gap-2">
-                                                    <Badge variant="secondary" className="text-xs">
-                                                        {listing.category}
-                                                    </Badge>
-                                                    {listing.isHot && (
-                                                        <Badge variant="destructive" className="text-xs">
-                                                            🔥 Hot
-                                                        </Badge>
-                                                    )}
-                                                    {listing.isFeatured && (
-                                                        <Badge variant="default" className="text-xs">
-                                                            ⭐ Featured
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <Button
-                                            size="sm"
-                                            disabled
-                                            className="flex items-center gap-1 w-full opacity-50"
-                                        >
-                                            <DollarSign className="w-3 h-3" />
-                                            Connect Wallet to Rent
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Call to Action */}
-                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <h4 className="text-lg font-semibold mb-2">Ready to Get Started?</h4>
-                    <p className="text-gray-600 mb-4">
-                        Connect your Starknet wallet to create, rent, and manage session keys
-                    </p>
-                    <div className="flex justify-center gap-4">
-                        <Button variant="outline" className="flex items-center gap-2">
-                            <Shield className="w-4 h-4" />
-                            Connect Wallet
-                        </Button>
-                        <Button className="flex items-center gap-2">
-                            <Plus className="w-4 h-4" />
-                            Learn More
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    // Show live contract data regardless of wallet connection status
+    // Users can view the marketplace but need wallet to interact
 
     return (
         <div className="space-y-6">
