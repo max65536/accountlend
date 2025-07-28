@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-07-25T10:06:32.175Z",
+  "network": "sepolia",
+  "deployedContracts": {
+    "SESSION_KEY_MANAGER": "0x01009de25860556a49b0a45a35e4938e441b07fe658101874b08100384d5cb3e",
+    "MARKETPLACE": "0x03f36ddcaadfe884c10932569e2145ffeb36624f999e18dbb201f9d52777eeab",
+    "ETH_TOKEN": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+  },
+  "testResults": {
+    "contractConnections": {
+      "sessionManager": {
+        "connected": true,
+        "userSessionCount": 0
+      },
+      "marketplace": {
+        "connected": true,
+        "activeListingsCount": 1
+      }
+    },
+    "sessionKeyCreation": {},
+    "marketplaceListing": {},
+    "sessionKeyRental": {
+      "userEarnings": "0",
+      "rentalWorkflowTested": true,
+      "earningsRetrieved": true
+    },
+    "dataRetrieval": {
+      "activeListings": [
+        "0x0"
+      ],
+      "userSessions": [
+        "0x0"
+      ],
+      "paginationWorking": true,
+      "dataRetrievalSuccessful": true
+    },
+    "errors": [
+      "Session key creation error: -32602: Invalid params",
+      "Marketplace listing error: -32602: Invalid params"
+    ],
+    "frontendIntegration": {
+      "contractAddresses": {
+        "sessionManager": "0x01009de25860556a49b0a45a35e4938e441b07fe658101874b08100384d5cb3e",
+        "marketplace": "0x03f36ddcaadfe884c10932569e2145ffeb36624f999e18dbb201f9d52777eeab",
+        "ethToken": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+      },
+      "addressesValid": true,
+      "configurationCorrect": true
+    }
+  },
+  "summary": {
+    "totalTests": 6,
+    "passedTests": 4,
+    "errors": 2,
+    "overallStatus": "PARTIAL_PASS"
+  }
+}
