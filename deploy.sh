@@ -84,14 +84,24 @@ SESSION_MANAGER_DECLARE_RESULT=$(sncast declare \
 SESSION_MANAGER_CLASS_HASH=$(echo "$SESSION_MANAGER_DECLARE_RESULT" | grep -o "0x[0-9a-fA-F]*" | head -1)
 echo -e "${GREEN}✓ SessionKeyManager declared with class hash: ${SESSION_MANAGER_CLASS_HASH}${NC}"
 
-# Wait a moment for declaration to be processed
+# Wait for declaration to be processed
 echo -e "${YELLOW}Waiting for declaration to be processed...${NC}"
-sleep 10
+sleep 30
 
-# Deploy SessionKeyManager contract
+# Verify declaration was successful
+echo -e "${YELLOW}Verifying SessionKeyManager declaration...${NC}"
+sncast call \
+    --contract-address 0x1 \
+    --function get_class_hash_at \
+    --calldata $SESSION_MANAGER_CLASS_HASH \
+    --network $NETWORK || echo "Declaration still processing..."
+
+# Deploy SessionKeyManager contract (with placeholder marketplace address)
 echo -e "${YELLOW}Deploying SessionKeyManager contract...${NC}"
+PLACEHOLDER_ADDRESS="0x0000000000000000000000000000000000000000000000000000000000000000"
 SESSION_MANAGER_DEPLOY_RESULT=$(sncast deploy \
     --class-hash $SESSION_MANAGER_CLASS_HASH \
+    --constructor-calldata $PLACEHOLDER_ADDRESS $ACCOUNT_ADDRESS \
     --network $NETWORK)
 
 SESSION_MANAGER_ADDRESS=$(echo "$SESSION_MANAGER_DEPLOY_RESULT" | grep -o "0x[0-9a-fA-F]*" | head -1)
@@ -115,6 +125,16 @@ MARKETPLACE_DEPLOY_RESULT=$(sncast deploy \
 
 MARKETPLACE_ADDRESS=$(echo "$MARKETPLACE_DEPLOY_RESULT" | grep -o "0x[0-9a-fA-F]*" | head -1)
 echo -e "${GREEN}✓ SessionKeyMarketplace deployed at: ${MARKETPLACE_ADDRESS}${NC}"
+
+# Update SessionKeyManager with the correct marketplace address
+echo -e "${YELLOW}Updating SessionKeyManager with marketplace address...${NC}"
+sncast invoke \
+    --contract-address $SESSION_MANAGER_ADDRESS \
+    --function set_marketplace_address \
+    --calldata $MARKETPLACE_ADDRESS \
+    --network $NETWORK
+
+echo -e "${GREEN}✓ SessionKeyManager updated with marketplace address${NC}"
 
 # Return to root directory
 cd ../..

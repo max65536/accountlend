@@ -7,7 +7,8 @@ pub trait ISessionKeyManager<TContractState> {
         owner: ContractAddress,
         duration: u64,
         permissions: Span<felt252>,
-        price: u256
+        price: u256,
+        currency_token: ContractAddress
     ) -> felt252;
     
     fn create_session_key_with_listing(
@@ -16,6 +17,7 @@ pub trait ISessionKeyManager<TContractState> {
         duration: u64,
         permissions: Span<felt252>,
         price: u256,
+        currency_token: ContractAddress,
         list_immediately: bool
     ) -> felt252;
     
@@ -45,6 +47,7 @@ pub struct SessionKeyInfo {
     pub expires_at: u64,
     pub permissions_hash: felt252,
     pub price: u256,
+    pub currency_token: ContractAddress,
     pub is_active: bool,
     pub rented_by: ContractAddress,
 }
@@ -140,10 +143,11 @@ pub mod SessionKeyManager {
             owner: ContractAddress,
             duration: u64,
             permissions: Span<felt252>,
-            price: u256
+            price: u256,
+            currency_token: ContractAddress
         ) -> felt252 {
             // Use the enhanced function with list_immediately = false for backwards compatibility
-            self.create_session_key_with_listing(owner, duration, permissions, price, false)
+            self.create_session_key_with_listing(owner, duration, permissions, price, currency_token, false)
         }
         
         fn create_session_key_with_listing(
@@ -152,6 +156,7 @@ pub mod SessionKeyManager {
             duration: u64,
             permissions: Span<felt252>,
             price: u256,
+            currency_token: ContractAddress,
             list_immediately: bool
         ) -> felt252 {
             let caller = get_caller_address();
@@ -173,6 +178,7 @@ pub mod SessionKeyManager {
                 expires_at,
                 permissions_hash,
                 price,
+                currency_token,
                 is_active: true,
                 rented_by: starknet::contract_address_const::<0>(),
             };
@@ -220,6 +226,7 @@ pub mod SessionKeyManager {
                 expires_at: session_info.expires_at,
                 permissions_hash: session_info.permissions_hash,
                 price: session_info.price,
+                currency_token: session_info.currency_token,
                 is_active: false,
                 rented_by: session_info.rented_by,
             };
@@ -299,6 +306,7 @@ pub mod SessionKeyManager {
                 expires_at: session_info.expires_at,
                 permissions_hash: session_info.permissions_hash,
                 price: session_info.price,
+                currency_token: session_info.currency_token,
                 is_active: session_info.is_active,
                 rented_by: renter,
             };

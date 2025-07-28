@@ -5,14 +5,16 @@ pub trait ISessionKeyMarketplace<TContractState> {
     fn list_session_key(
         ref self: TContractState,
         session_key: felt252,
-        price: u256
+        price: u256,
+        currency_token: ContractAddress
     );
     
     fn list_session_key_for_owner(
         ref self: TContractState,
         session_key: felt252,
         owner: ContractAddress,
-        price: u256
+        price: u256,
+        currency_token: ContractAddress
     );
     
     fn rent_session_key(
@@ -52,6 +54,7 @@ pub struct ListingInfo {
     pub session_key: felt252,
     pub owner: ContractAddress,
     pub price: u256,
+    pub currency_token: ContractAddress,
     pub is_active: bool,
     pub created_at: u64,
     pub rented_by: ContractAddress,
@@ -148,7 +151,8 @@ pub mod SessionKeyMarketplace {
         fn list_session_key(
             ref self: ContractState,
             session_key: felt252,
-            price: u256
+            price: u256,
+            currency_token: ContractAddress
         ) {
             let caller = get_caller_address();
             let current_time = get_block_timestamp();
@@ -161,6 +165,7 @@ pub mod SessionKeyMarketplace {
                 session_key,
                 owner: caller,
                 price,
+                currency_token,
                 is_active: true,
                 created_at: current_time,
                 rented_by: starknet::contract_address_const::<0>(),
@@ -185,7 +190,8 @@ pub mod SessionKeyMarketplace {
             ref self: ContractState,
             session_key: felt252,
             owner: ContractAddress,
-            price: u256
+            price: u256,
+            currency_token: ContractAddress
         ) {
             let caller = get_caller_address();
             let current_time = get_block_timestamp();
@@ -198,6 +204,7 @@ pub mod SessionKeyMarketplace {
                 session_key,
                 owner,
                 price,
+                currency_token,
                 is_active: true,
                 created_at: current_time,
                 rented_by: starknet::contract_address_const::<0>(),
@@ -252,6 +259,7 @@ pub mod SessionKeyMarketplace {
                 session_key: listing.session_key,
                 owner: listing.owner,
                 price: listing.price,
+                currency_token: listing.currency_token,
                 is_active: listing.is_active,
                 created_at: listing.created_at,
                 rented_by: caller,
@@ -288,6 +296,7 @@ pub mod SessionKeyMarketplace {
                 session_key: listing.session_key,
                 owner: listing.owner,
                 price: listing.price,
+                currency_token: listing.currency_token,
                 is_active: false,
                 created_at: listing.created_at,
                 rented_by: listing.rented_by,
