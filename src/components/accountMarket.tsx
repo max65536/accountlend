@@ -142,7 +142,7 @@ export default function AccountMarket() {
             // 1. Get active listings from marketplace contract (already listed for rent)
             try {
                 const marketplaceCall = await provider.callContract({
-                    contractAddress: '0x03f36ddcaadfe884c10932569e2145ffeb36624f999e18dbb201f9d52777eeab',
+                    contractAddress: '0x008957aefd5fbc095ef5685b4c3779c15a388634f88f629bf1ea8090b8517383',
                     entrypoint: 'get_active_listings',
                     calldata: ['0x0', '0xa'] // offset: 0, limit: 10
                 });
@@ -156,7 +156,7 @@ export default function AccountMarket() {
                         validSessionKeys.map(async (sessionKey: string) => {
                             try {
                                 const listingInfoCall = await provider.callContract({
-                                    contractAddress: '0x03f36ddcaadfe884c10932569e2145ffeb36624f999e18dbb201f9d52777eeab',
+                                    contractAddress: '0x008957aefd5fbc095ef5685b4c3779c15a388634f88f629bf1ea8090b8517383',
                                     entrypoint: 'get_listing_info',
                                     calldata: [sessionKey]
                                 });
@@ -202,7 +202,7 @@ export default function AccountMarket() {
                 const testUserAddress = account.address || '0x0452183071ba5cb3fe2691ffa5541915262b15dc8cdbce3ac5175344f31f8b31';
                 
                 const sessionManagerCall = await provider.callContract({
-                    contractAddress: '0x0511dd4048011bbe996cf0142796d66bbcf47ab769fb61a11f5e66172cac0e39',
+                    contractAddress: '0x05053e21d88a77300f7f164d4be4defbd4aeed79367b8c6817a517579042a9dd',
                     entrypoint: 'get_user_session_keys',
                     calldata: [testUserAddress]
                 });
@@ -221,7 +221,7 @@ export default function AccountMarket() {
                                 
                                 // Get session key info from SessionKeyManager
                                 const sessionInfoCall = await provider.callContract({
-                                    contractAddress: '0x0511dd4048011bbe996cf0142796d66bbcf47ab769fb61a11f5e66172cac0e39',
+                                    contractAddress: '0x05053e21d88a77300f7f164d4be4defbd4aeed79367b8c6817a517579042a9dd',
                                     entrypoint: 'get_session_key_info',
                                     calldata: [sessionKey]
                                 });
