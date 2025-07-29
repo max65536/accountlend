@@ -18,10 +18,21 @@ export const CONTRACT_ADDRESSES = {
 export const getCurrentNetwork = (): 'mainnet' | 'sepolia' => {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('accountlend-network');
+    
+    // Migration: convert old 'testnet' value to 'sepolia'
+    if (saved === 'testnet') {
+      localStorage.setItem('accountlend-network', 'sepolia');
+      return 'sepolia';
+    }
+    
     return (saved as 'mainnet' | 'sepolia') || 'sepolia';
   }
   // Fallback for server-side rendering
-  return (process.env.NEXT_PUBLIC_NETWORK as 'mainnet' | 'sepolia') || 'sepolia';
+  const envNetwork = process.env.NEXT_PUBLIC_NETWORK;
+  if (envNetwork === 'testnet') {
+    return 'sepolia';
+  }
+  return (envNetwork as 'mainnet' | 'sepolia') || 'sepolia';
 };
 
 // Get contract address for current network

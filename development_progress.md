@@ -364,6 +364,7 @@ A Session Key Marketplace built on Starknet that allows users to lend and rent t
 5. ~~**No Live Testing**: Contract interactions not tested with real wallets~~ ✅ **RESOLVED**: Live contract interactions implemented and tested
 6. ~~**Session key creation failing with Argent X wallet integration**~~ ✅ **RESOLVED**: Fixed session key generation with proper hex validation
 7. ~~**DOM nesting warnings in Badge component**~~ ✅ **RESOLVED**: Fixed invalid HTML nesting in AccountMarket component
+8. ~~**Network config warning: "Network config not found for testnet, falling back to sepolia"**~~ ✅ **RESOLVED**: Fixed NetworkContext to use 'sepolia' consistently instead of 'testnet'
 
 ### Technical Debt
 1. **Hardcoded Values**: Mock data instead of blockchain state

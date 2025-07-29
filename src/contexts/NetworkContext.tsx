@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-type Network = 'mainnet' | 'testnet';
+type Network = 'mainnet' | 'sepolia';
 
 interface NetworkContextType {
   currentNetwork: Network;
@@ -25,13 +25,13 @@ interface NetworkProviderProps {
 }
 
 export function NetworkProvider({ children }: NetworkProviderProps) {
-  // Initialize with testnet as default, but check localStorage for saved preference
+  // Initialize with sepolia as default, but check localStorage for saved preference
   const [currentNetwork, setCurrentNetwork] = useState<Network>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('accountlend-network');
-      return (saved as Network) || 'testnet';
+      return (saved as Network) || 'sepolia';
     }
-    return 'testnet';
+    return 'sepolia';
   });
 
   // Save network preference to localStorage
@@ -53,7 +53,7 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
     currentNetwork,
     switchNetwork,
     isMainnet: currentNetwork === 'mainnet',
-    isTestnet: currentNetwork === 'testnet',
+    isTestnet: currentNetwork === 'sepolia',
   };
 
   return (
