@@ -160,9 +160,42 @@ if (!window.starknetAccount) {
 ```
 
 #### Step 3: Test Session Key Validation
+
+**First, check if you have session keys:**
 ```javascript
-// Get all stored session keys using wrapper function
-const allKeys = window.getAllStoredSessionKeys();
+// Get all stored session keys using wrapper function (MUST use await!)
+const allKeys = await window.getAllStoredSessionKeys();
+console.log('All session keys:', allKeys);
+
+// If empty array [], you need to either:
+// 1. Connect your wallet and create session keys, OR
+// 2. Create mock session keys for testing
+```
+
+**If you get an empty array `[]`, create mock session keys:**
+```javascript
+// Create mock session keys for testing (no wallet required)
+if (!window.starknetAccount) {
+  console.log('No wallet connected. Creating mock session keys for testing...');
+  
+  // This creates mock session keys in localStorage
+  const mockKeys = window.sessionKeyService.createMockSessionKeys('0x1234567890abcdef1234567890abcdef12345678');
+  console.log('Mock session keys created:', mockKeys);
+  
+  // Now try getting session keys again
+  const allKeys = await window.getAllStoredSessionKeys();
+  console.log('Session keys after creating mocks:', allKeys);
+} else {
+  console.log('Wallet connected. Use window.createMockSessionKeys() to add test data.');
+  const mockKeys = window.createMockSessionKeys();
+  console.log('Mock session keys created for connected wallet:', mockKeys);
+}
+```
+
+**Now test session key validation:**
+```javascript
+// Get all stored session keys using wrapper function (MUST use await!)
+const allKeys = await window.getAllStoredSessionKeys();
 console.log('All session keys:', allKeys);
 
 // Validate a specific session key
@@ -170,19 +203,41 @@ if (allKeys.length > 0) {
   const firstKey = allKeys[0];
   
   // Use wrapper functions for validation
-  window.validateSessionKey(firstKey)
-    .then(isValid => {
-      console.log('Session key valid:', isValid);
-    });
+  const isValid = await window.validateSessionKey(firstKey);
+  console.log('Session key valid:', isValid);
   
   // Check permissions
   const hasTransfer = window.hasPermission(firstKey, 'transfer');
   console.log('Has transfer permission:', hasTransfer);
   
-  // Get session statistics
-  const stats = window.getSessionKeyStats();
+  // Get session statistics (MUST use await!)
+  const stats = await window.getSessionKeyStats();
   console.log('Session key statistics:', stats);
+} else {
+  console.log('No session keys found. Create some first using the methods above.');
 }
+```
+
+**Important Note**: Since these functions are async, you must use `await` or run them in an async context. If you get `Promise {<pending>}`, you forgot to use `await`!
+
+**Alternative - Wrap in async function**:
+```javascript
+(async () => {
+  const allKeys = await window.getAllStoredSessionKeys();
+  console.log('All session keys:', allKeys);
+  
+  if (allKeys.length > 0) {
+    const firstKey = allKeys[0];
+    const isValid = await window.validateSessionKey(firstKey);
+    console.log('Session key valid:', isValid);
+    
+    const hasTransfer = window.hasPermission(firstKey, 'transfer');
+    console.log('Has transfer permission:', hasTransfer);
+    
+    const stats = await window.getSessionKeyStats();
+    console.log('Session key statistics:', stats);
+  }
+})();
 ```
 
 ## STRK-Only Account Testing
@@ -527,12 +582,42 @@ const debugSessionKey = (sessionKey) => {
   console.log('- Time Until Expiry:', sessionKey.expiresAt - Date.now(), 'ms');
 };
 
-// Use with any session key
-const keys = sessionService.getAllStoredSessionKeys();
+// Use with any session key (MUST use await!)
+const keys = await sessionService.getAllStoredSessionKeys();
 if (keys.length > 0) {
   debugSessionKey(keys[0]);
 }
 ```
+
+### 5. Promise {<pending>} Issues
+If you see `Promise {<pending>}` in the console, you forgot to use `await`:
+
+```javascript
+// ❌ WRONG - Returns Promise {<pending>}
+const keys = window.getAllStoredSessionKeys();
+console.log(keys); // Promise {<pending>}
+
+// ✅ CORRECT - Use await
+const keys = await window.getAllStoredSessionKeys();
+console.log(keys); // Actual array of session keys
+
+// ✅ ALTERNATIVE - Use .then()
+window.getAllStoredSessionKeys().then(keys => {
+  console.log('Session keys:', keys);
+});
+
+// ✅ ALTERNATIVE - Wrap in async function
+(async () => {
+  const keys = await window.getAllStoredSessionKeys();
+  console.log('Session keys:', keys);
+})();
+```
+
+**Functions that require `await`:**
+- `window.getAllStoredSessionKeys()`
+- `window.validateSessionKey(sessionKey)`
+- `window.getSessionKeyStats()`
+- `window.debugSessionKeys()`
 
 ## Advanced Testing Scenarios
 

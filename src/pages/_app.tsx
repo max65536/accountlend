@@ -33,13 +33,13 @@ export default function App({ Component, pageProps }: AppProps) {
         );
       };
 
-      (window as any).getAllStoredSessionKeys = () => {
+      (window as any).getAllStoredSessionKeys = async () => {
         const account = (window as any).starknetAccount;
         if (!account) {
           console.warn('No wallet connected. Returning empty array.');
           return [];
         }
-        return sessionKeyService.getStoredSessionKeys(account.address);
+        return await sessionKeyService.getStoredSessionKeys(account.address);
       };
 
       (window as any).validateSessionKey = async (sessionKey: any) => {
@@ -59,13 +59,13 @@ export default function App({ Component, pageProps }: AppProps) {
       };
       
       // Also expose some utility functions for debugging
-      (window as any).debugSessionKeys = () => {
+      (window as any).debugSessionKeys = async () => {
         const account = (window as any).starknetAccount;
         if (!account) {
           console.warn('No wallet connected.');
           return [];
         }
-        const keys = sessionKeyService.getStoredSessionKeys(account.address);
+        const keys = await sessionKeyService.getStoredSessionKeys(account.address);
         console.log('All stored session keys:', keys);
         return keys;
       };
@@ -89,13 +89,13 @@ export default function App({ Component, pageProps }: AppProps) {
         console.log('All notifications cleared');
       };
 
-      (window as any).getSessionKeyStats = () => {
+      (window as any).getSessionKeyStats = async () => {
         const account = (window as any).starknetAccount;
         if (!account) {
           console.warn('No wallet connected.');
           return null;
         }
-        return sessionKeyService.getSessionKeyStats(account.address);
+        return await sessionKeyService.getSessionKeyStats(account.address);
       };
       
       console.log('🔧 Debug services exposed to window:');
