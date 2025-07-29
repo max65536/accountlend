@@ -90,13 +90,22 @@ export default function SessionKeyCreator() {
       const { transactionService } = await import('../services/transactionService');
       
       try {
+        // Get currency token address based on selected currency
+        const { getCurrentNetworkConfig } = await import('../config/contracts');
+        const networkConfig = getCurrentNetworkConfig();
+        const currencyTokenAddress = sessionData.currency === 'STRK' 
+          ? networkConfig.strkTokenAddress 
+          : networkConfig.ethTokenAddress;
+
         // Create session key using the new service
         const result = await sessionKeyService.createSessionKey(
           account as any,
           sessionData.duration,
           sessionData.permissions,
           sessionData.price,
-          sessionData.description
+          sessionData.description,
+          true, // autoList
+          currencyTokenAddress // Pass the currency token address
         );
         
         console.log('Session key created successfully:', result.sessionKey);

@@ -264,7 +264,7 @@ export class SessionKeyService {
       }
 
       // Store session key locally and in contract - get the real transaction hash
-      const transactionHash = await this.storeSessionKey(storedSessionKey, account, autoList);
+      const transactionHash = await this.storeSessionKey(storedSessionKey, account, autoList, currencyToken);
 
       return { 
         sessionKey: storedSessionKey, 
@@ -442,7 +442,7 @@ export class SessionKeyService {
   /**
    * Store session key in smart contract
    */
-  private async storeSessionKey(sessionKey: StoredSessionKey, account?: Account, autoList: boolean = true): Promise<string | null> {
+  private async storeSessionKey(sessionKey: StoredSessionKey, account?: Account, autoList: boolean = true, currencyToken?: string): Promise<string | null> {
     const networkConfig = getCurrentNetworkConfig();
     
     // Check if we have a deployed contract address
@@ -478,8 +478,8 @@ export class SessionKeyService {
       // Convert price from ETH to wei (multiply by 10^18)
       const priceInWei = num.toBigInt(parseFloat(sessionKey.price) * Math.pow(10, 18));
       
-      // Get currency token address - default to ETH if not specified
-      const currencyTokenAddress = networkConfig.ethTokenAddress;
+      // Get currency token address - use provided currencyToken or default to ETH
+      const currencyTokenAddress = currencyToken || networkConfig.ethTokenAddress;
       
       console.log('🚀 Calling contract.create_session_key...');
       console.log('Parameters:', {
