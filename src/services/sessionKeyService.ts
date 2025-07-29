@@ -182,7 +182,8 @@ export class SessionKeyService {
     permissions: string[],
     price: string,
     description: string,
-    autoList: boolean = true // Enable auto-listing by default
+    autoList: boolean = true, // Enable auto-listing by default
+    currencyToken?: string // Currency token address (ETH or STRK)
   ): Promise<{ sessionKey: StoredSessionKey; transactionHash?: string }> {
     try {
       // Convert duration from hours to milliseconds for expiry
@@ -477,14 +478,40 @@ export class SessionKeyService {
       // Convert price from ETH to wei (multiply by 10^18)
       const priceInWei = num.toBigInt(parseFloat(sessionKey.price) * Math.pow(10, 18));
       
-      console.log('🚀 Calling contract.create_session_key_with_listing...');
-      const result = await contract.create_session_key_with_listing(
-        sessionKey.owner,
-        sessionKey.duration,
-        permissions,
-        priceInWei.toString(),
-        autoList  // Pass boolean directly as the ABI expects core::bool
-      );
+      // Get currency token address - default to ETH if not specified
+      const currencyTokenAddress = networkConfig.ethTokenAddress;
+      
+      console.log('🚀 Calling contract.create_session_key...');
+      console.log('Parameters:', {
+        owner: sessionKey.owner,
+        duration: sessionKey.duration,
+        permissions: permissions,
+        price: priceInWei.toString(),
+        currencyToken: currencyTokenAddress
+      });
+      
+      // Call the contract with the expected multi-currency interface
+      // Convert price to u256 format (low, high)
+      const priceLow = priceInWei & ((BigInt(1) << BigInt(128)) - BigInt(1));
+      const priceHigh = priceInWei >> BigInt(128);
+      
+      // Use create_session_key_with_listing to enable auto-listing if autoList is true
+      const result = autoList && priceInWei > 0 
+        ? await contract.create_session_key_with_listing(
+            sessionKey.owner,
+            sessionKey.duration,
+            permissions,
+            { low: priceLow.toString(), high: priceHigh.toString() },
+            currencyTokenAddress,
+            true // list_immediately = true
+          )
+        : await contract.create_session_key(
+            sessionKey.owner,
+            sessionKey.duration,
+            permissions,
+            { low: priceLow.toString(), high: priceHigh.toString() },
+            currencyTokenAddress
+          );
       
       console.log('✅ Contract call result:', result);
       console.log('📝 Transaction hash:', result.transaction_hash);

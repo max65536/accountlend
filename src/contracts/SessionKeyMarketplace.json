@@ -1,120 +1,42 @@
 {
   "abi": [
     {
-      "type": "function",
-      "name": "list_session_key",
-      "inputs": [
+      "type": "impl",
+      "name": "SessionKeyMarketplaceImpl",
+      "interface_name": "lendaccount::marketplace::ISessionKeyMarketplace"
+    },
+    {
+      "type": "struct",
+      "name": "core::integer::u256",
+      "members": [
         {
-          "name": "session_key",
-          "type": "core::felt252"
+          "name": "low",
+          "type": "core::integer::u128"
         },
         {
-          "name": "price",
-          "type": "core::integer::u256"
+          "name": "high",
+          "type": "core::integer::u128"
         }
-      ],
-      "outputs": [],
-      "state_mutability": "external"
+      ]
     },
     {
-      "type": "function",
-      "name": "rent_session_key",
-      "inputs": [
+      "type": "enum",
+      "name": "core::bool",
+      "variants": [
         {
-          "name": "session_key",
-          "type": "core::felt252"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "core::bool"
-        }
-      ],
-      "state_mutability": "external"
-    },
-    {
-      "type": "function",
-      "name": "cancel_listing",
-      "inputs": [
-        {
-          "name": "session_key",
-          "type": "core::felt252"
-        }
-      ],
-      "outputs": [],
-      "state_mutability": "external"
-    },
-    {
-      "type": "function",
-      "name": "get_listing_info",
-      "inputs": [
-        {
-          "name": "session_key",
-          "type": "core::felt252"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "lendaccount::market::ListingInfo"
-        }
-      ],
-      "state_mutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "get_active_listings",
-      "inputs": [
-        {
-          "name": "offset",
-          "type": "core::integer::u32"
+          "name": "False",
+          "type": "()"
         },
         {
-          "name": "limit",
-          "type": "core::integer::u32"
+          "name": "True",
+          "type": "()"
         }
-      ],
-      "outputs": [
-        {
-          "type": "core::array::Array::<core::felt252>"
-        }
-      ],
-      "state_mutability": "view"
+      ]
     },
     {
-      "type": "function",
-      "name": "withdraw_earnings",
-      "inputs": [
-        {
-          "name": "amount",
-          "type": "core::integer::u256"
-        }
-      ],
-      "outputs": [],
-      "state_mutability": "external"
-    },
-    {
-      "type": "function",
-      "name": "get_user_earnings",
-      "inputs": [
-        {
-          "name": "user",
-          "type": "core::starknet::contract_address::ContractAddress"
-        }
-      ],
-      "outputs": [
-        {
-          "type": "core::integer::u256"
-        }
-      ],
-      "state_mutability": "view"
-    }
-  ],
-  "events": [
-    {
-      "type": "event",
-      "name": "SessionKeyListed",
-      "keys": [],
-      "data": [
+      "type": "struct",
+      "name": "lendaccount::marketplace::ListingInfo",
+      "members": [
         {
           "name": "session_key",
           "type": "core::felt252"
@@ -126,59 +48,333 @@
         {
           "name": "price",
           "type": "core::integer::u256"
+        },
+        {
+          "name": "currency_token",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "is_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "created_at",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "rented_by",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "rented_at",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "core::array::Span::<core::felt252>",
+      "members": [
+        {
+          "name": "snapshot",
+          "type": "@core::array::Array::<core::felt252>"
+        }
+      ]
+    },
+    {
+      "type": "interface",
+      "name": "lendaccount::marketplace::ISessionKeyMarketplace",
+      "items": [
+        {
+          "type": "function",
+          "name": "list_session_key",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            },
+            {
+              "name": "price",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "currency_token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "list_session_key_for_owner",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            },
+            {
+              "name": "owner",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "price",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "currency_token",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "rent_session_key",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::bool"
+            }
+          ],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "cancel_listing",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "get_listing_info",
+          "inputs": [
+            {
+              "name": "session_key",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "lendaccount::marketplace::ListingInfo"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "get_active_listings",
+          "inputs": [
+            {
+              "name": "offset",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "limit",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::array::Span::<core::felt252>"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "withdraw_earnings",
+          "inputs": [
+            {
+              "name": "amount",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "get_user_earnings",
+          "inputs": [
+            {
+              "name": "user",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u256"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "set_session_key_manager",
+          "inputs": [
+            {
+              "name": "new_session_key_manager",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "get_session_key_manager",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "state_mutability": "view"
+        }
+      ]
+    },
+    {
+      "type": "constructor",
+      "name": "constructor",
+      "inputs": [
+        {
+          "name": "session_key_manager",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "payment_token",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "marketplace_fee",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress"
         }
       ]
     },
     {
       "type": "event",
-      "name": "SessionKeyRented",
-      "keys": [],
-      "data": [
+      "name": "lendaccount::marketplace::SessionKeyMarketplace::SessionKeyListed",
+      "kind": "struct",
+      "members": [
         {
           "name": "session_key",
-          "type": "core::felt252"
+          "type": "core::felt252",
+          "kind": "data"
         },
         {
           "name": "owner",
-          "type": "core::starknet::contract_address::ContractAddress"
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
+        },
+        {
+          "name": "price",
+          "type": "core::integer::u256",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "lendaccount::marketplace::SessionKeyMarketplace::SessionKeyRented",
+      "kind": "struct",
+      "members": [
+        {
+          "name": "session_key",
+          "type": "core::felt252",
+          "kind": "data"
+        },
+        {
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
         },
         {
           "name": "renter",
-          "type": "core::starknet::contract_address::ContractAddress"
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
         },
         {
           "name": "price",
-          "type": "core::integer::u256"
+          "type": "core::integer::u256",
+          "kind": "data"
         }
       ]
     },
     {
       "type": "event",
-      "name": "ListingCancelled",
-      "keys": [],
-      "data": [
+      "name": "lendaccount::marketplace::SessionKeyMarketplace::ListingCancelled",
+      "kind": "struct",
+      "members": [
         {
           "name": "session_key",
-          "type": "core::felt252"
+          "type": "core::felt252",
+          "kind": "data"
         },
         {
           "name": "owner",
-          "type": "core::starknet::contract_address::ContractAddress"
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
         }
       ]
     },
     {
       "type": "event",
-      "name": "EarningsWithdrawn",
-      "keys": [],
-      "data": [
+      "name": "lendaccount::marketplace::SessionKeyMarketplace::EarningsWithdrawn",
+      "kind": "struct",
+      "members": [
         {
           "name": "user",
-          "type": "core::starknet::contract_address::ContractAddress"
+          "type": "core::starknet::contract_address::ContractAddress",
+          "kind": "data"
         },
         {
           "name": "amount",
-          "type": "core::integer::u256"
+          "type": "core::integer::u256",
+          "kind": "data"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "lendaccount::marketplace::SessionKeyMarketplace::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "SessionKeyListed",
+          "type": "lendaccount::marketplace::SessionKeyMarketplace::SessionKeyListed",
+          "kind": "nested"
+        },
+        {
+          "name": "SessionKeyRented",
+          "type": "lendaccount::marketplace::SessionKeyMarketplace::SessionKeyRented",
+          "kind": "nested"
+        },
+        {
+          "name": "ListingCancelled",
+          "type": "lendaccount::marketplace::SessionKeyMarketplace::ListingCancelled",
+          "kind": "nested"
+        },
+        {
+          "name": "EarningsWithdrawn",
+          "type": "lendaccount::marketplace::SessionKeyMarketplace::EarningsWithdrawn",
+          "kind": "nested"
         }
       ]
     }

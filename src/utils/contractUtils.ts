@@ -18,7 +18,7 @@ export const createSessionKeyManagerContract = (account: Account) => {
 };
 
 export const createSessionKeyMarketplaceContract = (account: Account) => {
-  const contractAddress = getContractAddress('ACCOUNT_MARKET');
+  const contractAddress = getContractAddress('MARKETPLACE');
   if (contractAddress === '0x0') {
     throw new Error('Session Key Marketplace contract not deployed yet');
   }

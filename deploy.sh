@@ -79,10 +79,21 @@ cd contract/lendaccount
 echo -e "${YELLOW}Declaring SessionKeyManager contract...${NC}"
 SESSION_MANAGER_DECLARE_RESULT=$(sncast declare \
     --contract-name SessionKeyManager \
-    --network $NETWORK)
+    --network $NETWORK 2>&1)
 
-SESSION_MANAGER_CLASS_HASH=$(echo "$SESSION_MANAGER_DECLARE_RESULT" | grep -o "0x[0-9a-fA-F]*" | head -1)
-echo -e "${GREEN}✓ SessionKeyManager declared with class hash: ${SESSION_MANAGER_CLASS_HASH}${NC}"
+if echo "$SESSION_MANAGER_DECLARE_RESULT" | grep -q "already declared"; then
+    echo -e "${YELLOW}SessionKeyManager already declared, extracting class hash...${NC}"
+    # Extract class hash from the error message
+    SESSION_MANAGER_CLASS_HASH=$(echo "$SESSION_MANAGER_DECLARE_RESULT" | grep -o "0x[0-9a-fA-F]\{63,64\}" | head -1)
+    if [ -z "$SESSION_MANAGER_CLASS_HASH" ]; then
+        # Try to get it from the contract file using grep instead of jq
+        SESSION_MANAGER_CLASS_HASH=$(grep -o '"class_hash":"0x[0-9a-fA-F]\{63,64\}"' target/dev/lendaccount_SessionKeyManager.contract_class.json | cut -d'"' -f4)
+    fi
+else
+    SESSION_MANAGER_CLASS_HASH=$(echo "$SESSION_MANAGER_DECLARE_RESULT" | grep -o "0x[0-9a-fA-F]\{63,64\}" | head -1)
+fi
+
+echo -e "${GREEN}✓ SessionKeyManager class hash: ${SESSION_MANAGER_CLASS_HASH}${NC}"
 
 # Wait for declaration to be processed
 echo -e "${YELLOW}Waiting for declaration to be processed...${NC}"
@@ -111,13 +122,30 @@ echo -e "${GREEN}✓ SessionKeyManager deployed at: ${SESSION_MANAGER_ADDRESS}${
 echo -e "${YELLOW}Declaring SessionKeyMarketplace contract...${NC}"
 MARKETPLACE_DECLARE_RESULT=$(sncast declare \
     --contract-name SessionKeyMarketplace \
-    --network $NETWORK)
+    --network $NETWORK 2>&1)
 
-MARKETPLACE_CLASS_HASH=$(echo "$MARKETPLACE_DECLARE_RESULT" | grep -o "0x[0-9a-fA-F]*" | head -1)
-echo -e "${GREEN}✓ SessionKeyMarketplace declared with class hash: ${MARKETPLACE_CLASS_HASH}${NC}"
+if echo "$MARKETPLACE_DECLARE_RESULT" | grep -q "already declared"; then
+    echo -e "${YELLOW}SessionKeyMarketplace already declared, extracting class hash...${NC}"
+    # Extract class hash from the error message
+    MARKETPLACE_CLASS_HASH=$(echo "$MARKETPLACE_DECLARE_RESULT" | grep -o "0x[0-9a-fA-F]\{63,64\}" | head -1)
+    if [ -z "$MARKETPLACE_CLASS_HASH" ]; then
+        # Try to get it from the contract file using grep instead of jq
+        MARKETPLACE_CLASS_HASH=$(grep -o '"class_hash":"0x[0-9a-fA-F]\{63,64\}"' target/dev/lendaccount_SessionKeyMarketplace.contract_class.json | cut -d'"' -f4)
+    fi
+else
+    MARKETPLACE_CLASS_HASH=$(echo "$MARKETPLACE_DECLARE_RESULT" | grep -o "0x[0-9a-fA-F]\{63,64\}" | head -1)
+fi
+
+echo -e "${GREEN}✓ SessionKeyMarketplace class hash: ${MARKETPLACE_CLASS_HASH}${NC}"
 
 # Deploy SessionKeyMarketplace contract with constructor parameters
 echo -e "${YELLOW}Deploying SessionKeyMarketplace contract...${NC}"
+echo -e "${BLUE}Constructor parameters:${NC}"
+echo -e "  SessionKeyManager: ${SESSION_MANAGER_ADDRESS}"
+echo -e "  ETH Token: ${ETH_TOKEN_ADDRESS}"
+echo -e "  Marketplace Fee: ${MARKETPLACE_FEE}"
+echo -e "  Owner: ${ACCOUNT_ADDRESS}"
+
 MARKETPLACE_DEPLOY_RESULT=$(sncast deploy \
     --class-hash $MARKETPLACE_CLASS_HASH \
     --constructor-calldata $SESSION_MANAGER_ADDRESS $ETH_TOKEN_ADDRESS $MARKETPLACE_FEE $ACCOUNT_ADDRESS \

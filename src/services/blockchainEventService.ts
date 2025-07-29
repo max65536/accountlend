@@ -62,7 +62,7 @@ export class BlockchainEventService {
     
     // Initialize contracts
     const sessionKeyManagerAddress = getContractAddress('SESSION_KEY_MANAGER');
-    const sessionKeyMarketplaceAddress = getContractAddress('ACCOUNT_MARKET');
+    const sessionKeyMarketplaceAddress = getContractAddress('MARKETPLACE');
     
     this.sessionKeyManagerContract = new Contract(
       SessionKeyManagerABI.abi,
@@ -392,7 +392,7 @@ export class BlockchainEventService {
   } {
     return {
       sessionKeyManager: getContractAddress('SESSION_KEY_MANAGER'),
-      sessionKeyMarketplace: getContractAddress('ACCOUNT_MARKET')
+      sessionKeyMarketplace: getContractAddress('MARKETPLACE')
     };
   }
 
@@ -405,7 +405,7 @@ export class BlockchainEventService {
   }> {
     try {
       const sessionKeyManagerAddress = getContractAddress('SESSION_KEY_MANAGER');
-      const sessionKeyMarketplaceAddress = getContractAddress('ACCOUNT_MARKET');
+      const sessionKeyMarketplaceAddress = getContractAddress('MARKETPLACE');
       
       // Check if contracts exist (simplified check)
       const sessionKeyManagerHealthy = sessionKeyManagerAddress !== '0x0';

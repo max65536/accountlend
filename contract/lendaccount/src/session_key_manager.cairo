@@ -55,8 +55,8 @@ pub struct SessionKeyInfo {
 // Interface for calling the marketplace contract
 #[starknet::interface]
 trait ISessionKeyMarketplace<TContractState> {
-    fn list_session_key(ref self: TContractState, session_key: felt252, price: u256);
-    fn list_session_key_for_owner(ref self: TContractState, session_key: felt252, owner: ContractAddress, price: u256);
+    fn list_session_key(ref self: TContractState, session_key: felt252, price: u256, currency_token: ContractAddress);
+    fn list_session_key_for_owner(ref self: TContractState, session_key: felt252, owner: ContractAddress, price: u256, currency_token: ContractAddress);
 }
 
 #[starknet::contract]
@@ -333,12 +333,15 @@ pub mod SessionKeyManager {
                 return;
             }
             
+            // Get session info to retrieve currency token
+            let session_info = self.session_keys.read(session_key);
+            
             // Attempt to call marketplace
             let marketplace = ISessionKeyMarketplaceDispatcher { contract_address: marketplace_address };
             
             // Use a try-catch pattern by checking if the call succeeds
             // In Cairo, we handle this by making the call and catching any panics
-            let result = self._safe_marketplace_call(marketplace, session_key, price, owner);
+            let result = self._safe_marketplace_call(marketplace, session_key, price, owner, session_info.currency_token);
             
             if result {
                 self.emit(SessionKeyAutoListed {
@@ -355,10 +358,10 @@ pub mod SessionKeyManager {
             }
         }
         
-        fn _safe_marketplace_call(ref self: ContractState, marketplace: ISessionKeyMarketplaceDispatcher, session_key: felt252, price: u256, owner: ContractAddress) -> bool {
+        fn _safe_marketplace_call(ref self: ContractState, marketplace: ISessionKeyMarketplaceDispatcher, session_key: felt252, price: u256, owner: ContractAddress, currency_token: ContractAddress) -> bool {
             // In a production environment, this would use proper error handling
             // For now, we'll assume the call succeeds and let the marketplace handle validation
-            marketplace.list_session_key_for_owner(session_key, owner, price);
+            marketplace.list_session_key_for_owner(session_key, owner, price, currency_token);
             true
         }
         

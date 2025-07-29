@@ -68,6 +68,10 @@
           "type": "core::integer::u256"
         },
         {
+          "name": "currency_token",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
           "name": "is_active",
           "type": "core::bool"
         },
@@ -100,6 +104,10 @@
             {
               "name": "price",
               "type": "core::integer::u256"
+            },
+            {
+              "name": "currency_token",
+              "type": "core::starknet::contract_address::ContractAddress"
             }
           ],
           "outputs": [
@@ -128,6 +136,10 @@
             {
               "name": "price",
               "type": "core::integer::u256"
+            },
+            {
+              "name": "currency_token",
+              "type": "core::starknet::contract_address::ContractAddress"
             },
             {
               "name": "list_immediately",

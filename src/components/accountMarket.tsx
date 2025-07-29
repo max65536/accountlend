@@ -139,37 +139,57 @@ export default function AccountMarket() {
             
             const allListings: SessionKeyListing[] = [];
             
+            // Get network configuration for contract addresses
+            const { getCurrentNetworkConfig } = await import('../config/contracts');
+            const networkConfig = getCurrentNetworkConfig();
+            
             // 1. Get active listings from marketplace contract (already listed for rent)
             try {
                 const marketplaceCall = await provider.callContract({
-                    contractAddress: '0x008957aefd5fbc095ef5685b4c3779c15a388634f88f629bf1ea8090b8517383',
+                    contractAddress: networkConfig.marketplaceAddress,
                     entrypoint: 'get_active_listings',
                     calldata: ['0x0', '0xa'] // offset: 0, limit: 10
                 });
                 
                 console.log('Raw marketplace call result:', marketplaceCall);
                 
-                if (marketplaceCall.result && marketplaceCall.result.length > 0) {
-                    const validSessionKeys = marketplaceCall.result.filter(key => key !== '0x0' && key !== '0');
+                if (marketplaceCall.result && marketplaceCall.result.length > 1) {
+                    // First element is array length, skip it
+                    const sessionKeys = marketplaceCall.result.slice(1);
+                    const validSessionKeys = sessionKeys.filter(key => key !== '0x0' && key !== '0');
                     
                     const marketplaceListings = await Promise.all(
                         validSessionKeys.map(async (sessionKey: string) => {
                             try {
                                 const listingInfoCall = await provider.callContract({
-                                    contractAddress: '0x008957aefd5fbc095ef5685b4c3779c15a388634f88f629bf1ea8090b8517383',
+                                    contractAddress: networkConfig.marketplaceAddress,
                                     entrypoint: 'get_listing_info',
                                     calldata: [sessionKey]
                                 });
                                 
-                                const [sessionKeyResult, owner, priceLow, priceHigh, isActive, createdAt, rentedBy, rentedAt] = listingInfoCall.result;
+                                const [sessionKeyResult, owner, priceLow, priceHigh, currencyToken, isActive, createdAt, rentedBy, rentedAt] = listingInfoCall.result;
                                 const priceWei = BigInt(priceLow) + (BigInt(priceHigh) << BigInt(128));
                                 const priceEth = Number(priceWei) / 1e18;
+                                
+                                // Determine currency type
+                                const { getCurrentNetworkConfig } = await import('../config/contracts');
+                                const config = getCurrentNetworkConfig();
+                                const normalizedCurrencyToken = currencyToken.toLowerCase().replace(/^0x0+/, '0x');
+                                const normalizedEthToken = config.ethTokenAddress.toLowerCase().replace(/^0x0+/, '0x');
+                                const normalizedStrkToken = config.strkTokenAddress.toLowerCase().replace(/^0x0+/, '0x');
+                                
+                                let currencySymbol = 'ETH'; // default
+                                if (normalizedCurrencyToken === normalizedEthToken) {
+                                    currencySymbol = 'ETH';
+                                } else if (normalizedCurrencyToken === normalizedStrkToken) {
+                                    currencySymbol = 'STRK';
+                                }
                                 
                                 if (parseInt(isActive, 16) === 1 && priceWei > BigInt(0)) {
                                     return {
                                         sessionKey: sessionKeyResult,
                                         owner: owner,
-                                        price: priceEth.toFixed(6),
+                                        price: `${priceEth.toFixed(6)} ${currencySymbol}`,
                                         isActive: true,
                                         createdAt: parseInt(createdAt, 16),
                                         expiresAt: parseInt(createdAt, 16) + 86400,
@@ -202,15 +222,17 @@ export default function AccountMarket() {
                 const testUserAddress = account.address || '0x0452183071ba5cb3fe2691ffa5541915262b15dc8cdbce3ac5175344f31f8b31';
                 
                 const sessionManagerCall = await provider.callContract({
-                    contractAddress: '0x05053e21d88a77300f7f164d4be4defbd4aeed79367b8c6817a517579042a9dd',
+                    contractAddress: networkConfig.sessionKeyManagerAddress,
                     entrypoint: 'get_user_session_keys',
                     calldata: [testUserAddress]
                 });
                 
                 console.log('SessionKeyManager call result:', sessionManagerCall);
                 
-                if (sessionManagerCall.result && sessionManagerCall.result.length > 0) {
-                    const validSessionKeys = sessionManagerCall.result.filter(key => key !== '0x0' && key !== '0');
+                if (sessionManagerCall.result && sessionManagerCall.result.length > 1) {
+                    // First element is array length, skip it
+                    const sessionKeys = sessionManagerCall.result.slice(1);
+                    const validSessionKeys = sessionKeys.filter(key => key !== '0x0' && key !== '0');
                     
                     const sessionManagerListings = await Promise.all(
                         validSessionKeys.map(async (sessionKey: string) => {
@@ -221,7 +243,7 @@ export default function AccountMarket() {
                                 
                                 // Get session key info from SessionKeyManager
                                 const sessionInfoCall = await provider.callContract({
-                                    contractAddress: '0x05053e21d88a77300f7f164d4be4defbd4aeed79367b8c6817a517579042a9dd',
+                                    contractAddress: networkConfig.sessionKeyManagerAddress,
                                     entrypoint: 'get_session_key_info',
                                     calldata: [sessionKey]
                                 });
@@ -582,7 +604,7 @@ export default function AccountMarket() {
                                     </Badge>
                                     <div className="text-right">
                                         <div className="text-lg font-bold text-gray-900">
-                                            {listing.price} ETH
+                                            {listing.price}
                                         </div>
                                         <div className="text-xs text-gray-500">
                                             {listing.duration}

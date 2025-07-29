@@ -47,6 +47,15 @@ pub trait ISessionKeyMarketplace<TContractState> {
         self: @TContractState,
         user: ContractAddress
     ) -> u256;
+    
+    fn set_session_key_manager(
+        ref self: TContractState,
+        new_session_key_manager: ContractAddress
+    );
+    
+    fn get_session_key_manager(
+        self: @TContractState
+    ) -> ContractAddress;
 }
 
 #[derive(Drop, Serde, starknet::Store, Copy)]
@@ -372,6 +381,20 @@ pub mod SessionKeyMarketplace {
             user: ContractAddress
         ) -> u256 {
             self.user_earnings.read(user)
+        }
+        
+        fn set_session_key_manager(
+            ref self: ContractState,
+            new_session_key_manager: ContractAddress
+        ) {
+            self._only_owner();
+            self.session_key_manager.write(new_session_key_manager);
+        }
+        
+        fn get_session_key_manager(
+            self: @ContractState
+        ) -> ContractAddress {
+            self.session_key_manager.read()
         }
     }
 
